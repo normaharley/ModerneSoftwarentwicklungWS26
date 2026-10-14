@@ -1,3 +1,22 @@
+# eVote – Online-Abstimmungssystem für Bürgerbefragungen
+
+## 5. eVote: Online-Abstimmungssystem für Bürgerbefragungen
+
+Eine sichere Plattform für Online-Abstimmungen, bei der Bürger über städtische Entscheidungen oder Projekte abstimmen können.
+
+### Funktionale Anforderungen
+
+- **Nutzerregistrierung und Authentifizierung:** Registrierung für Bürger mit gesicherter Authentifizierung (z. B. durch E-Mail-Bestätigung oder 2-Faktor-Authentifizierung).
+- **Abstimmungen anzeigen:** Bürger können verfügbare Abstimmungen mit den zugehörigen Fragestellungen und Antwortmöglichkeiten einsehen.
+- **Stimme abgeben:** Bürger können an aktiven Abstimmungen teilnehmen und ihre Stimme abgeben.
+- **Einmalige Stimmabgabe:** Das System stellt sicher, dass jeder berechtigte Bürger pro Abstimmung nur einmal abstimmen kann.
+- **Abstimmungen verwalten:** Berechtigte Personen können Abstimmungen erstellen, bearbeiten, veröffentlichen und beenden.
+- **Abstimmungszeitraum festlegen:** Für jede Abstimmung können ein Start- und ein Endzeitpunkt festgelegt werden.
+- **Ergebnisse auswerten:** Das System zählt die abgegebenen Stimmen automatisch aus.
+- **Ergebnisse anzeigen:** Die Ergebnisse abgeschlossener Abstimmungen können angezeigt werden.
+- **Benutzerverwaltung:** Berechtigte Personen können Benutzerkonten verwalten.
+- **Sichere Datenspeicherung:** Abstimmungsdaten und Stimmen werden gespeichert und vor unbefugtem Zugriff geschützt.
+
 # Git-Handout für Anfänger
 
 ## 1. Was ist Git?
