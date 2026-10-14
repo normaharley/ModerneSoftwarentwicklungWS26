@@ -299,17 +299,8 @@ Anschließend:
 ```git add .```
 ```git commit -m "Merge-Konflikt gelöst"```
 
-## 4. Git in IntelliJ / PyCharm
-### Local Repository
-### Remote Repository
-### Änderungen committen
-### Push und Pull
-### Branches und Merge
-
-## 5. GitHub und weitere Tools
-### GitHub
-### GitLab
-### Nützliche Git-Tools
+##Git mit IntelliJ/PyCharm benutzen: Local Repository und Remote Repository
+## Nützliche Git-Tools und Plabormen (z. B. GitHub)
 
 ## 6. Typischer Git-Workflow
 1. Repository klonen
