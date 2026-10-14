@@ -19,13 +19,13 @@ Eine sichere Plattform für Online-Abstimmungen, bei der Bürger über städtisc
 
 # Git-Handout für Anfänger
 
-## 1. Was ist Git?
+## 1. Was ist Git und wozu ist es gut?
 
 Besonders bei der gemeinsamen Entwicklung von Software ist Git hilfreich, weil mehrere Personen gleichzeitig an einem Projekt arbeiten können. Änderungen werden dokumentiert und können über Branches und Pull Requests kontrolliert zusammengeführt werden.
 
 Git unterscheidet grundsätzlich zwischen einem lokalen Repository auf dem eigenen Computer und einem Remote Repository, das beispielsweise auf GitHub oder GitLab liegt.
 
-## 2. Was ist GitHub?
+## 2. Was ist GitHub und wozu ist es gut?
 
 GitHub ist eine Plattform im Internet, auf der Git-Repositorys gespeichert werden können.
 
