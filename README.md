@@ -299,7 +299,7 @@ Anschließend:
 ```git add .```
 ```git commit -m "Merge-Konflikt gelöst"```
 
-##Git mit IntelliJ/PyCharm benutzen: Local Repository und Remote Repository
+## Git mit IntelliJ/PyCharm benutzen: Local Repository und Remote Repository
 ## Nützliche Git-Tools und Plabormen (z. B. GitHub)
 
 ## 6. Typischer Git-Workflow
@@ -313,7 +313,16 @@ Anschließend:
 8. Merge
 
 ## 7. Zusammenarbeit im Team
-### Pull Requests
+### Ablauf von Pull Requests und Code Reviews
+
+Ein Pull Request (PR) ist eine Anfrage, die Änderungen eines Branches in einen anderen Branch zu mergen. Die Änderungen müssen vorher von einer weiteren Person geprüft und freigegeben werden.
+
+**Beispiel:** Person A implementiert ein neues Feature im Branch `feature/checkout-options` und möchte es in den Zielbranch (z. B. `main` oder `development`) mergen. Damit keine ungeprüften Änderungen ohne Zustimmung ins Projekt gelangen, prüft in der Regel eine Person B die Änderungen und weist ggf. auf Fehler oder Breaking Changes hin. In diesem Fall wird der PR nicht freigegeben (not approved), muss überarbeitet werden und geht erneut ins Code Review. Dieser Zyklus wiederholt sich, bis der PR freigegeben ist. Anschließend wird er automatisch oder manuell in den Zielbranch gemergt.
+
+**Merge-Konflikte:** Sowohl im Code Review als auch in automatischen Git-Checks fallen vor dem Merge Konflikte auf. Diese müssen im Feature-Branch behoben werden. Häufig wird dazu der Zielbranch erneut in den Feature-Branch gemergt, weil dort durch andere PRs neue Änderungen entstanden sind, die der Feature-Branch noch nicht enthält. Alternativ ist auch ein Rebase des Feature-Branches auf den Zielbranch möglich.
+
+
+
 ### Code Reviews
 ### Gute Commit-Nachrichten
 
