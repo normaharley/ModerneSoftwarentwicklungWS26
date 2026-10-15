@@ -322,6 +322,30 @@ Ein Pull Request (PR) ist eine Anfrage, die Änderungen eines Branches in einen 
 **Merge-Konflikte:** Sowohl im Code Review als auch in automatischen Git-Checks fallen vor dem Merge Konflikte auf. Diese müssen im Feature-Branch behoben werden. Häufig wird dazu der Zielbranch erneut in den Feature-Branch gemergt, weil dort durch andere PRs neue Änderungen entstanden sind, die der Feature-Branch noch nicht enthält. Alternativ ist auch ein Rebase des Feature-Branches auf den Zielbranch möglich.
 
 
+**Beispielablauf:**
+```mermaid
+sequenceDiagram
+    actor A as Person A (Implementation)
+    participant R as Repository
+    actor B as Person B (Code Review)
+
+    A->>R: Branch feature/options erstellen
+    A->>R: Commit 1 und Commit 2
+    A->>R: PR feature/options -> main
+    A->>R: Konflikte prüfen und beheben
+    R->>B: Review-Anfrage
+    B->>R: Diff und Checks prüfen
+    alt Änderungen nötig
+        B->>A: Request Changes
+        A->>R: Commit 3 (Nachbesserung)
+        A->>B: Erneutes Review anfordern
+        B->>R: Nachbesserungen prüfen
+    end
+    B->>R: Approve
+    R->>R: Merge in main
+```
+
+
 
 ### Code Reviews
 ### Gute Commit-Nachrichten
