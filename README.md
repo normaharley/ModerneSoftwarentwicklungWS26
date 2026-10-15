@@ -80,7 +80,7 @@ Für unsere Aufgabe erstellt ein Teammitglied ein gemeinsames Repository auf Git
 
 Alle Teammitglieder müssen Zugriff auf das Repository haben.
 
-Anschließend wird das Repository auf den eigenen Computer heruntergeladen.
+Anschließend wird das Repository auf den eigenen Computer heruntergeladen. 
 
 Dafür verwendet man:
 
@@ -89,6 +89,10 @@ Dafür verwendet man:
 Klonen bedeutet, eine Kopie eines Remote Repositorys auf den eigenen Computer herunterzuladen.
 
 Danach besitzt man ein lokales Repository, mit dem man arbeiten kann.
+
+Wenn Git Bash benutzt wird, wird das Repository in dem Ordner angelegt, von dem Git Bash geöffnet wurde.
+
+Um in der Zukunft in dem Repository zu arbeiten (für pulls oder commits beispielsweise), muss Git Bash dann entsprechend in dem neuen Ordner des Repository geöffnet werden.
 
 ### Was ist Git init?
 
