@@ -394,7 +394,7 @@ Breaking Changes mit `!` oder Footer `BREAKING CHANGE:` markieren.
 
 Schlecht: `fix`, `wip`, `Fixed stuff`
 
-Gut: 'feat(checkout): add shipping options selection', 'fix(cart): prevent crash when cart is empty'
+Gut: `feat(checkout): add shipping options selection`, `fix(cart): prevent crash when cart is empty`
 
 ## 8. Beitrag der Teammitglieder
 - Person 1: ...
