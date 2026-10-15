@@ -371,6 +371,31 @@ sequenceDiagram
 
 ### Gute Commit-Nachrichten
 
+**Regeln**
+- Betreff im Imperativ, kurz, ohne Punkt am Ende ("Add checkout options")
+- Ein Commit pro logischer Änderung, Code danach lauffähig
+- Body erklärt das Warum, nicht jede Codezeile
+- Ticket referenzieren, z. B. `Closes #42`
+
+**Conventional Commits:** `<type>(<scope>): <beschreibung>`
+
+| Type | Verwendung |
+|---|---|
+| `feat` | Neues Feature |
+| `fix` | Fehlerbehebung |
+| `docs` | Dokumentation |
+| `refactor` | Umbau ohne Verhaltensänderung |
+| `test` | Tests |
+| `chore` | Build, Tooling, Abhängigkeiten |
+
+Breaking Changes mit `!` oder Footer `BREAKING CHANGE:` markieren.
+
+**Beispiele**
+
+Schlecht: `fix`, `wip`, `Fixed stuff`
+
+Gut: 'feat(checkout): add shipping options selection', 'fix(cart): prevent crash when cart is empty'
+
 ## 8. Beitrag der Teammitglieder
 - Person 1: ...
 - Person 2: ...
