@@ -314,7 +314,7 @@ Anschließend:
 9. Branch wird gelöscht
 
 ## 7. Zusammenarbeit im Team
-### Ablauf von Pull Requests und Code Reviews
+### Ablauf von Pull Requests
 
 Ein Pull Request (PR) ist eine Anfrage, die Änderungen eines Branches in einen anderen Branch zu mergen. Die Änderungen müssen vorher von einer weiteren Person geprüft und freigegeben werden.
 
@@ -349,6 +349,26 @@ sequenceDiagram
 
 
 ### Code Reviews
+**Ziel:**
+- Fehler, Sicherheitslücken und Breaking Changes früh erkennen
+- Codequalität, Lesbarkeit, Wartbarkeit, Einhaltung von standards (z.b. FDD)
+- Wissen im Team verteilen (Code wird von mehr als einer Person verstanden)
+- Wartbarkeit und Testabdeckung sichern
+
+
+**Worauf wird geachtet:**
+- Korrektheit: Tut der Code, was er soll? Werden Randfälle behandelt?
+- Lesbarkeit: Sind Namen, Struktur und Kommentare verständlich?
+- Konsistenz: Passt die Änderung zu Architektur und Code-Style des Projekts?
+- Tests: Sind neue oder angepasste Tests vorhanden, laufen die automatischen Checks durch?
+- Sicherheit und Performance: Gibt es offensichtliche Risiken oder Engpässe?
+- Umfang: Ist der PR fokussiert und nicht unnötig groß?
+
+**Ergebnisse des Reviews:**
+- PR ist approved und wird für merge freigegeben
+- Anmerkung als Kommentare ohne entscheidung
+- Änderungsanfrage, änderungen sind notwendig und PR wird dann erneut geprüft
+
 ### Gute Commit-Nachrichten
 
 ## 8. Beitrag der Teammitglieder
