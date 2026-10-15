@@ -304,13 +304,14 @@ Anschließend:
 
 ## 6. Typischer Git-Workflow
 1. Repository klonen
-2. Branch erstellen
+2. Neuen Branch erstellen
 3. Änderungen durchführen
 4. Commit erstellen
 5. Push
 6. Pull Request erstellen
 7. Review
 8. Merge
+9. Branch wird gelöscht
 
 ## 7. Zusammenarbeit im Team
 ### Ablauf von Pull Requests und Code Reviews
