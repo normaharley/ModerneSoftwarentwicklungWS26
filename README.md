@@ -80,7 +80,7 @@ Für unsere Aufgabe erstellt ein Teammitglied ein gemeinsames Repository auf Git
 
 Alle Teammitglieder müssen Zugriff auf das Repository haben.
 
-Anschließend wird das Repository auf den eigenen Computer heruntergeladen.
+Anschließend wird das Repository auf den eigenen Computer heruntergeladen. 
 
 Dafür verwendet man:
 
@@ -89,6 +89,10 @@ Dafür verwendet man:
 Klonen bedeutet, eine Kopie eines Remote Repositorys auf den eigenen Computer herunterzuladen.
 
 Danach besitzt man ein lokales Repository, mit dem man arbeiten kann.
+
+Wenn Git Bash benutzt wird, wird das Repository in dem Ordner angelegt, von dem Git Bash geöffnet wurde.
+
+Um in der Zukunft in dem Repository zu arbeiten (für pulls oder commits beispielsweise), muss Git Bash dann entsprechend in dem neuen Ordner des Repository geöffnet werden.
 
 ### Was ist Git init?
 
@@ -299,23 +303,102 @@ Anschließend:
 ```git add .```
 ```git commit -m "Merge-Konflikt gelöst"```
 
-##Git mit IntelliJ/PyCharm benutzen: Local Repository und Remote Repository
+## Git mit IntelliJ/PyCharm benutzen: Local Repository und Remote Repository
 ## Nützliche Git-Tools und Plabormen (z. B. GitHub)
 
 ## 6. Typischer Git-Workflow
 1. Repository klonen
-2. Branch erstellen
+2. Neuen Branch erstellen
 3. Änderungen durchführen
 4. Commit erstellen
 5. Push
 6. Pull Request erstellen
 7. Review
 8. Merge
+9. Branch wird gelöscht
 
 ## 7. Zusammenarbeit im Team
-### Pull Requests
+### Ablauf von Pull Requests
+
+Ein Pull Request (PR) ist eine Anfrage, die Änderungen eines Branches in einen anderen Branch zu mergen. Die Änderungen müssen vorher von einer weiteren Person geprüft und freigegeben werden.
+
+**Beispiel:** Person A implementiert ein neues Feature im Branch `feature/checkout-options` und möchte es in den Zielbranch (z. B. `main` oder `development`) mergen. Damit keine ungeprüften Änderungen ohne Zustimmung ins Projekt gelangen, prüft in der Regel eine Person B die Änderungen und weist ggf. auf Fehler oder Breaking Changes hin. In diesem Fall wird der PR nicht freigegeben (not approved), muss überarbeitet werden und geht erneut ins Code Review. Dieser Zyklus wiederholt sich, bis der PR freigegeben ist. Anschließend wird er automatisch oder manuell in den Zielbranch gemergt.
+
+**Merge-Konflikte:** Sowohl im Code Review als auch in automatischen Git-Checks fallen vor dem Merge Konflikte auf. Diese müssen im Feature-Branch behoben werden. Häufig wird dazu der Zielbranch erneut in den Feature-Branch gemergt, weil dort durch andere PRs neue Änderungen entstanden sind, die der Feature-Branch noch nicht enthält. Alternativ ist auch ein Rebase des Feature-Branches auf den Zielbranch möglich.
+
+
+**Beispielablauf:**
+```mermaid
+sequenceDiagram
+    actor A as Person A (Implementation)
+    participant R as Repository
+    actor B as Person B (Code Review)
+
+    A->>R: Branch feature/options erstellen
+    A->>R: Commit 1 und Commit 2
+    A->>R: PR feature/options -> main
+    A->>R: Konflikte prüfen und beheben
+    R->>B: Review-Anfrage
+    B->>R: Diff und Checks prüfen
+    alt Änderungen nötig
+        B->>A: Request Changes
+        A->>R: Commit 3 (Nachbesserung)
+        A->>B: Erneutes Review anfordern
+        B->>R: Nachbesserungen prüfen
+    end
+    B->>R: Approve
+    R->>R: Merge in main
+```
+
+
+
 ### Code Reviews
+**Ziel:**
+- Fehler, Sicherheitslücken und Breaking Changes früh erkennen
+- Codequalität, Lesbarkeit, Wartbarkeit, Einhaltung von standards (z.b. FDD)
+- Wissen im Team verteilen (Code wird von mehr als einer Person verstanden)
+- Wartbarkeit und Testabdeckung sichern
+
+
+**Worauf wird geachtet:**
+- Korrektheit: Tut der Code, was er soll? Werden Randfälle behandelt?
+- Lesbarkeit: Sind Namen, Struktur und Kommentare verständlich?
+- Konsistenz: Passt die Änderung zu Architektur und Code-Style des Projekts?
+- Tests: Sind neue oder angepasste Tests vorhanden, laufen die automatischen Checks durch?
+- Sicherheit und Performance: Gibt es offensichtliche Risiken oder Engpässe?
+- Umfang: Ist der PR fokussiert und nicht unnötig groß?
+
+**Ergebnisse des Reviews:**
+- PR ist approved und wird für merge freigegeben
+- Anmerkung als Kommentare ohne entscheidung
+- Änderungsanfrage, änderungen sind notwendig und PR wird dann erneut geprüft
+
 ### Gute Commit-Nachrichten
+
+**Regeln**
+- Betreff im Imperativ, kurz, ohne Punkt am Ende ("Add checkout options")
+- Ein Commit pro logischer Änderung, Code danach lauffähig
+- Body erklärt das Warum, nicht jede Codezeile
+- Ticket referenzieren, z. B. `Closes #42`
+
+**Conventional Commits:** `<type>(<scope>): <beschreibung>`
+
+| Type | Verwendung |
+|---|---|
+| `feat` | Neues Feature |
+| `fix` | Fehlerbehebung |
+| `docs` | Dokumentation |
+| `refactor` | Umbau ohne Verhaltensänderung |
+| `test` | Tests |
+| `chore` | Build, Tooling, Abhängigkeiten |
+
+Breaking Changes mit `!` oder Footer `BREAKING CHANGE:` markieren.
+
+**Beispiele**
+
+Schlecht: `fix`, `wip`, `Fixed stuff`
+
+Gut: `feat(checkout): add shipping options selection`, `fix(cart): prevent crash when cart is empty`
 
 ## 8. Beitrag der Teammitglieder
 - Person 1: ...
