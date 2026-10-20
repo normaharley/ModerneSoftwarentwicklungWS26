@@ -1,0 +1,39 @@
+[project]
+name = "modernesoftwarentwicklungws26"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "JJ Omin", email = "leonhard.tilly@stud.hs-emden-leer.de" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "django>=6.1.2",
+]
+
+[project.scripts]
+modernesoftwarentwicklungws26 = "modernesoftwarentwicklungws26:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.1",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+addopts = "--cov=polls --cov-report=term-missing --cov-report=xml"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DJ"]
