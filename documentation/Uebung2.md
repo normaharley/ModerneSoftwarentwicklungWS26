@@ -27,7 +27,7 @@ Continuous Deployment geht noch einen Schritt weiter: Alles, was auf `main` land
 - beim Code Review muss man nicht mehr auf Formatierung achten, das macht die Pipeline
 - `main` bleibt immer lauffähig
 
-Lokal kann man mit `make check` vorher die gleichen Prüfungen laufen lassen wie die CI.
+Lokal kann man mit `make check` vorher die gleichen Prüfungen laufen lassen wie die CI. 
 
 **Plattform:** GitHub Actions, weil unser Repo eh schon auf GitHub liegt. Man braucht keinen extra Account oder Server, die Config liegt als YAML direkt im Repo und die Ergebnisse sieht man direkt im PR. Jenkins müsste man selbst hosten und GitLab würde einen Umzug vom Repo bedeuten.
 
@@ -76,7 +76,7 @@ Die weitere Recherche ging deshalb in Richtung Platform-as-a-Service (PaaS), VPS
 
 Optionen:
 - **PaaS** (Render, Railway, PythonAnywhere, Fly.io): wenig Aufwand, Deployment direkt aus GitHub. Die kostenlosen Varianten sind aber oft stark eingeschränkt und müssten genauer betrachtet werden, evtl. fallen sie dadurch raus.
-- **VPS** (z. B. Hetzner, IONOS) mit Docker: kostet etwas, hat aber die meisten Freiheiten und eine bessere Verfügbarkeit als ein privater Server. Außerdem stehen die Server in Deutschland, was bei Abstimmungsdaten wegen Datenschutz ein Plus wäre.
+- **VPS** (z. B. Hetzner, IONOS, oder andere) mit Docker: kostet etwas, hat aber die meisten Freiheiten und eine bessere Verfügbarkeit als ein privater Server. Außerdem stehen die Server in Deutschland, was bei Abstimmungsdaten wegen Datenschutz ein Plus wäre.
 - **Self-Hosting** (eigener TrueNAS Server): kostenlos, aber Verfügbarkeit hängt vom Heimnetz ab und das Freigeben ins Internet ist ein Sicherheitsrisiko.
 
 Ablauf könnte so aussehen: PR wird in `main` gemerged --> CI läuft --> Docker-Image wird gebaut und in eine Registry gepusht → Server zieht das neue Image und startet neu (inkl. `migrate`).
