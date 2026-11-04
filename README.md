@@ -1,5 +1,17 @@
 # eVote – Online-Abstimmungssystem für Bürgerbefragungen
 
+## Schnellstart
+
+Voraussetzung: [uv](https://docs.astral.sh/uv/) ist installiert.
+
+```bash
+uv sync                              # einmalig: Abhängigkeiten installieren
+uv run modernesoftwarentwicklungws26 # Programm starten
+uv run pytest                        # Tests ausführen
+make check                           # alle CI-Prüfungen: Lint, Format, Tests
+make fix                             # Lint-Fehler beheben und Code formatieren
+```
+
 ## 5. eVote: Online-Abstimmungssystem für Bürgerbefragungen
 
 Eine sichere Plattform für Online-Abstimmungen, bei der Bürger über städtische Entscheidungen oder Projekte abstimmen können.
