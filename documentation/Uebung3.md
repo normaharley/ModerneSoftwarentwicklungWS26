@@ -389,3 +389,200 @@ flowchart LR
     style EV fill:#a0c4fb
 ```
 
+## 4. Entitäten und Aggregates definieren (Detail pro Context)
+
+Grundlage sind unser finales Klassendiagramm (Aufgabe 2) und die Bounded-Context-Tabelle (Aufgabe 3).
+
+Ein Aggregate ist eine Gruppe zusammengehöriger Objekte, die gemeinsam gespeichert wird und fachliche Regeln einhält. Für den Entwurf gelten vier Grundregeln:
+
+- Jedes Aggregate hat genau eine Aggregate Root. Nur sie wird von außen angesprochen.
+- Die Aggregate Root schützt die Invarianten. Fachregeln stehen deshalb in der Root und nicht in einem Service.
+- Aggregates werden als Ganzes gespeichert und geladen (ein Repository pro Aggregate).
+- Andere Aggregates werden nur über ihre ID referenziert, nicht über ein Objekt.
+
+Für eVote kommen zwei Festlegungen dazu:
+
+- Alle IDs sind Value Objects über einer UUID (`PersonId`, `AbstimmungId`, `OptionId`, `StimmzettelId`, `EinladungscodeId`).
+- Pro Transaktion wird genau ein Aggregate geändert.
+
+Aggregates pro Bounded Context (gestrichelt: Verweise ausschließlich per ID, durchgezogen: Teil desselben Aggregates)
+
+```mermaid
+classDiagram
+    direction LR
+
+    namespace Benutzerverwaltung {
+        class Person {
+            <<Aggregate Root>>
+            personId: PersonId
+            name: str
+            email: EmailAdresse
+            passwortHash: PasswortHash
+            adresse: Adresse
+            rolle: Rolle
+            verifiziert: bool
+        }
+        class Einladungscode {
+            <<Aggregate Root>>
+            einladungscodeId: EinladungscodeId
+            code: EinladungscodeWert
+            adresse: Adresse
+            ablaufdatum: datetime
+            eingeloest: bool
+            eingeloestVon: PersonId
+        }
+    }
+
+    namespace Abstimmungsverwaltung {
+        class Abstimmung {
+            <<Aggregate Root>>
+            abstimmungId: AbstimmungId
+            titel: str
+            beschreibung: str
+            startzeit: datetime
+            endzeit: datetime
+            status: Abstimmungsstatus
+        }
+        class Abstimmungsoption {
+            <<Entity>>
+            optionId: OptionId
+            bezeichnung: str
+        }
+    }
+
+    namespace Abstimmungsdurchfuehrung {
+        class Stimmzettel {
+            <<Aggregate Root>>
+            stimmzettelId: StimmzettelId
+            abstimmungId: AbstimmungId
+            waehlerToken: WaehlerToken
+            stimme: Stimme
+            abgegebenAm: datetime
+            geaendertAm: datetime
+        }
+    }
+
+    namespace Ergebnisverwaltung {
+        class Ergebnis {
+            <<Read Model>>
+            abstimmungId: AbstimmungId
+            stimmenverteilung: dict
+            beteiligung: int
+        }
+    }
+
+    Abstimmung "1" *-- "2..*" Abstimmungsoption : enthält
+    Einladungscode ..> Person : eingeloestVon
+    Stimmzettel ..> Abstimmung : abstimmungId
+    Stimmzettel ..> Abstimmungsoption : OptionId
+    Ergebnis ..> Abstimmung : abstimmungId
+```
+
+
+**Unterschied zu Abbildung 2:** Dort hat die Abstimmung eine Beziehung zu ihren Stimmzetteln, und die Person besitzt eine Abstimmungsberechtigung. Hier trägt der Stimmzettel nur die `abstimmungId` und statt der `personId` ein pseudonymes `WaehlerToken`. Dadurch lässt sich jedes Aggregate unabhängig laden, speichern und testen, und kein Aggregate verbindet eine Stimme mit einem Klarnamen. Die Abstimmungsberechtigung aus Abbildung 2 ist kein eigenes Aggregate geworden: Ihre Aufgabe erfüllen `Person.darfAbstimmen()` und die Eindeutigkeit von `(abstimmungId, waehlerToken)` auf dem Stimmzettel.
+
+### Aggregates
+
+|Aggregate|Attribute|Methoden|Invarianten|
+|---|---|---|---|
+|**Person**<br>Aggregate Root<br>Context: Benutzerverwaltung|**personId**: PersonId<br>name: str<br>email: EmailAdresse<br>passwortHash: PasswortHash<br>adresse: Adresse<br>rolle: Rolle (BUERGER, ADMIN)<br>verifiziert: bool|`registrieren(name, email, passwort, adresse)` _[Factory]_<br>`alsAdminAnlegen(name, email, passwort)` _[Factory]_<br>`verifizieren()`<br>`passwortPruefen(klartext)`<br>`darfAbstimmen()`|Name und E-Mail sind nicht leer<br>Ein Admin kann nie abstimmen: `darfAbstimmen()` liefert für ADMIN immer `False`<br>Eine nicht verifizierte Person kann nicht abstimmen<br>Das Passwort wird nie im Klartext gehalten|
+|**Einladungscode**<br>Aggregate Root<br>Context: Benutzerverwaltung|**einladungscodeId**: EinladungscodeId<br>code: EinladungscodeWert<br>adresse: Adresse<br>ablaufdatum: datetime<br>eingeloest: bool<br>_eingeloestVon_: PersonId \| None|`generieren(adresse, ablaufdatum)` _[Factory]_<br>`einloesen(personId, jetzt)`<br>`istAbgelaufen(jetzt)`|Ein Code wird nur einmal eingelöst<br>Ein abgelaufener Code kann nicht eingelöst werden<br>`eingeloestVon` ist genau dann gesetzt, wenn `eingeloest` gilt|
+|**Abstimmung**<br>Aggregate Root<br>Context: Abstimmungsverwaltung|**abstimmungId**: AbstimmungId<br>titel: str<br>beschreibung: str<br>startzeit: datetime<br>endzeit: datetime<br>status: Abstimmungsstatus<br>optionen: list[Abstimmungsoption]|`erstellen(titel, beschreibung, optionen, startzeit, endzeit)` _[Factory]_<br>`bearbeiten(titel, beschreibung, optionen)`<br>`starten()`<br>`beenden()`<br>`istOffen(jetzt)`|`endzeit` liegt nach `startzeit`<br>Mindestens 2 Optionen, keine Bezeichnung doppelt<br>Statuswechsel nur ENTWURF → AKTIV → BEENDET, nie zurück<br>Ab AKTIV sind Titel, Beschreibung und Optionen unveränderlich|
+|**Abstimmungsoption**<br>Entity im Aggregate Abstimmung<br>Context: Abstimmungsverwaltung|**optionId**: OptionId<br>bezeichnung: str|– (wird nur über `Abstimmung` angelegt und geändert)|Bezeichnung ist nicht leer|
+|**Stimmzettel**<br>Aggregate Root<br>Context: Abstimmungsdurchführung|**stimmzettelId**: StimmzettelId<br>_abstimmungId_: AbstimmungId<br>waehlerToken: WaehlerToken<br>stimme: Stimme<br>abgegebenAm: datetime<br>geaendertAm: datetime \| None|`abgeben(abstimmungId, waehlerToken, stimme)` _[Factory]_<br>`aendern(stimme, jetzt)`|Die Stimme zeigt auf genau eine OptionId<br>`geaendertAm` liegt nicht vor `abgegebenAm`<br>Der Stimmzettel enthält keine PersonId, nur das Token|
+
+**Warum `Abstimmungsoption` eine Entity und kein Value Object ist:** Stimmzettel verweisen dauerhaft über die `OptionId` auf die Option. Die Option braucht deshalb eine stabile Identität. Der Zugriff erfolgt nur über `Abstimmung`, ein eigenes Repository gibt es nicht.
+
+**`alsAdminAnlegen()`** ist im Klassendiagramm aus Aufgabe 2 noch nicht enthalten. Ohne diese Methode gibt es keinen Auslöser für das Event „Admin angelegt“. Die Methode ist im Diagramm zu ergänzen.
+
+### Value Objects
+
+|Value Object|Attribute|Regel|
+|---|---|---|
+|`PersonId`, `EinladungscodeId`, `AbstimmungId`, `OptionId`, `StimmzettelId`|wert: UUID|Wird beim Anlegen des Aggregates erzeugt. Unveränderlich (`frozen dataclass`).|
+|`EmailAdresse`|wert: str|Gültiges E-Mail-Format, wird klein geschrieben gespeichert. Unveränderlich.|
+|`PasswortHash`|wert: str|Enthält nur den Hash, nie das Klartextpasswort. Unveränderlich.|
+|`Adresse`|strasse: str, hausnummer: str, plz: str, ort: str|Kein Feld ist leer, die PLZ hat 5 Ziffern. Unveränderlich.|
+|`EinladungscodeWert`|wert: str|Feste Länge, zufällig erzeugt, nicht leer. Unveränderlich.|
+|`Rolle`|Enum: BUERGER, ADMIN|–|
+|`Abstimmungsstatus`|Enum: ENTWURF, AKTIV, BEENDET|Wechsel nur vorwärts.|
+|`WaehlerToken`|wert: str|Pseudonym, lässt sich ohne Zusatzwissen nicht auf eine Person zurückführen. Unveränderlich.|
+|`Stimme`|ausgewaehlteOption: OptionId|Verweist auf genau eine Option. Unveränderlich; eine Änderung ersetzt das ganze Objekt.|
+
+### Read Model `Ergebnis` (Context: Ergebnisverwaltung)
+
+`Ergebnis` ist kein Aggregate, weil es keine eigenen Regeln schützt. Es wird einmalig aus den Stimmzetteln berechnet und danach nur gelesen.
+
+|Attribut|Typ|Beschreibung|
+|---|---|---|
+|_abstimmungId_|AbstimmungId|ID der ausgewerteten Abstimmung|
+|stimmenverteilung|dict[OptionId, int]|Anzahl Stimmen pro Option|
+|beteiligung|int|Anzahl abgegebener Stimmzettel|
+|ermitteltAm|datetime|Zeitpunkt der Auswertung|
+
+**Entstehung:** Nach dem Event „Abstimmung beendet“ zählt der `AuswertungsService` (Schritt 5) die Stimmzettel aus, erzeugt das `Ergebnis` und löst „Ergebnis ausgewertet“ und „Ergebnis veröffentlicht“ aus. Ein Ergebnis entsteht erst nach `BEENDET` und wird danach nicht mehr geändert.
+
+### Anmerkungen
+
+- Regeln, die mehrere Aggregates betreffen, kann eine einzelne Aggregate Root nicht allein sichern. Sie werden in Schritt 5 in Services behandelt:
+    - **Eindeutigkeit der E-Mail-Adresse:** betrifft alle `Person`-Aggregates. Prüfung im `RegistrierungsService`, zusätzlich `UNIQUE(email)` in der Datenbank.
+    - **Adressabgleich bei der Verifizierung:** Die Adresse der Person muss zur Adresse des Codes passen. Das braucht `Person` und `Einladungscode`, also prüft es der `RegistrierungsService`.
+    - **Höchstens ein Stimmzettel pro Bürger und Abstimmung:** Prüfung im `StimmabgabeService`, zusätzlich `UNIQUE(abstimmung_id, waehler_token)` in der Datenbank. Die Teilnahme bleibt freiwillig, es sind also 0 oder 1 Stimmzettel.
+    - **Stimmabgabe nur im offenen Zeitraum:** braucht `Abstimmung.istOffen()` und den `Stimmzettel`, also prüft es der `StimmabgabeService`.
+    - **Nur Berechtigte stimmen ab:** braucht `Person.darfAbstimmen()` und den `Stimmzettel`, also prüft es der `StimmabgabeService`.
+    - **Die Stimme zeigt auf eine Option der richtigen Abstimmung:** braucht `Abstimmung` und `Stimmzettel`, also prüft es der `StimmabgabeService`.
+- Der `Stimmzettel` führt bewusst keine `personId`. Das `WaehlerToken` wird beim Abstimmen aus `personId` und `abstimmungId` abgeleitet, sodass derselbe Bürger seinen Stimmzettel wiederfindet, ohne dass der Context Abstimmungsdurchführung den Klarnamen kennt. Wie das Token genau erzeugt wird, entscheiden wir in Schritt 5.
+- Bei der Registrierung werden `Person` und `Einladungscode` geändert, also zwei Aggregates. Damit die Regel „ein Aggregate pro Transaktion“ gilt, wird der Code erst nach dem Event „Profil registriert“ in einer zweiten Transaktion eingelöst.
+- `geburtsdatum` und vergleichbare Stammdaten führt eVote nicht, weil für die Wahlberechtigung nur die verifizierte Meldeadresse zählt.
+
+
+
+
+
+## 5. Domain Services und Repositories
+
+### Services
+
+Ein Domain Service enthält Fachlogik, die zu keiner einzelnen Entität „natürlich“ gehört, weil sie mehrere Aggregates betrifft. Ein Anwendungsservice enthält keine Fachregeln, sondern steuert nur den Ablauf eines Anwendungsfalls: Aggregate erzeugen oder laden, Methode aufrufen, über das Repository speichern. In kleinen Projekten übernimmt oft eine Klasse beide Rollen. Wichtig ist, dass wir wissen, welcher Teil Fachregel ist.
+
+|Service|Art|Aufgabe|Methoden|
+|---|---|---|---|
+|`RegistrierungsService`|Domain Service|Fachregeln über mehrere Aggregates: Eine E-Mail-Adresse darf nur einmal vorkommen (betrifft alle `Person`-Aggregates). Die Adresse der Person muss zur Adresse des Einladungscodes passen (`Person` + `Einladungscode`).|`registriere(name, email, passwort, adresse): PersonId`<br>`verifiziere(personId, codeWert, jetzt)`|
+|`PersonService`|Anwendungsservice|Steuert den Ablauf für Admins und Anmeldung: Aggregate erzeugen oder laden, Methode aufrufen, über das Repository speichern. Enthält keine Fachregeln.|`legeAdminAn(name, email, passwort): PersonId`<br>`meldeAn(email, passwort): PersonId`|
+|`EinladungscodeService`|Anwendungsservice|Erzeugt für eine Liste von Meldeadressen Einladungscodes und veröffentlicht das Event `CodesGeneriert` für den Versand durch den Druckdienstleister.|`generiereCodes(adressen, ablaufdatum): list[EinladungscodeId]`|
+|`AbstimmungService`|Anwendungsservice|Erstellt, startet und beendet Abstimmungen. Ein Domain Service ist nicht nötig, weil nur ein Aggregate betroffen ist. Beim Beenden veröffentlicht er das Event `AbstimmungBeendet`.|`erstelleAbstimmung(titel, beschreibung, optionen, zeitraum): AbstimmungId`<br>`starteAbstimmung(abstimmungId)`<br>`beendeAbstimmung(abstimmungId)`|
+|`WaehlerTokenService`|Domain Service|Leitet aus `personId` und `abstimmungId` das pseudonyme `WaehlerToken` ab. Dadurch findet derselbe Bürger seinen Stimmzettel wieder, ohne dass der Stimmzettel eine `personId` trägt.|`erzeugeToken(personId, abstimmungId): WaehlerToken`|
+|`StimmabgabeService`|Domain Service|Fachregeln über mehrere Aggregates: Nur Berechtigte dürfen abstimmen, nur solange die Abstimmung offen ist, und höchstens einmal pro Abstimmung. Die gewählte Option muss zur Abstimmung gehören.|`stimmeAbgeben(personId, abstimmungId, optionId): StimmzettelId`<br>`stimmeAendern(personId, abstimmungId, optionId)`<br>`hatTeilgenommen(personId, abstimmungId): bool`<br>`zaehleStimmen(abstimmungId): dict[OptionId, int]`|
+|`AuswertungsService`|Anwendungsservice|Reagiert auf das Event `AbstimmungBeendet` (Policy, Parameter `event`), holt die Stimmen über den Open Host Service der Stimmabgabe und erzeugt das Ergebnis (höchstens eines pro Abstimmung).|`werteAus(event): AbstimmungId`<br>`veroeffentliche(abstimmungId)`|
+
+Die Events werden im Code als eigene Klassen modelliert, mit Bezeichnern ohne Umlaute. `AbstimmungBeendet` enthält mindestens `abstimmungId`, `titel` und die Liste der Optionen mit `optionId` und `bezeichnung`, damit die Ergebnisverwaltung ohne Rückgriff auf andere Contexts auskommt.
+
+Anwendungsfälle, die nur ein Aggregate betreffen (zum Beispiel „Abstimmung starten“), brauchen keinen Domain Service: Das Aggregate wird über das Repository geladen, die Methode `starten()` aufgerufen und das Aggregate wieder gespeichert.
+
+#### Schnittstellen zwischen den Contexts
+
+Kein Service greift direkt auf die Aggregates eines fremden Contexts zu. Die drei Beziehungen aus der Context Map (Schritt 3) werden als Interfaces umgesetzt, die in der Domänenschicht des aufrufenden Contexts liegen:
+
+|Interface|Liegt in|Wird erfüllt von|Methode|Beziehung aus der Context Map|
+|---|---|---|---|---|
+|`WahlberechtigungPruefer`|Stimmabgabe|Benutzerverwaltung|`darfAbstimmen(personId): bool`|ACL|
+|`AbstimmungsInfo`|Stimmabgabe|Abstimmungsverwaltung|`istOffen(abstimmungId, jetzt): bool`<br>`optionIds(abstimmungId): set[OptionId]`|Published Language|
+|`StimmenAbfrage`|Auswertung|Stimmabgabe|`zaehleStimmen(abstimmungId): dict[OptionId, int]`|Open Host Service|
+
+Der `StimmabgabeService` erfährt über `WahlberechtigungPruefer` nur, _ob_ eine Person abstimmen darf, nie ihren Namen. Damit setzt die Schnittstelle das Wahlgeheimnis technisch durch und nicht nur organisatorisch.
+
+### Repositories
+
+Ein Repository verhält sich aus Sicht der Domäne wie eine Sammlung von Aggregates. „Persistenz verwalten“ bedeutet nur: Aggregates speichern und wieder laden. Ob dahinter eine Datenbank oder, wie in den kommenden Übungen, ein In-Memory-Speicher steckt, weiß die Domäne nicht.
+
+|Repository|Aggregate|Methoden|
+|---|---|---|
+|`PersonRepository`|`Person`|`speichern(person)`<br>`findeNachId(personId): Person \| None`<br>`findeNachEmail(email): Person \| None`|
+|`EinladungscodeRepository`|`Einladungscode`|`speichern(code)`<br>`findeNachId(einladungscodeId): Einladungscode \| None`<br>`findeNachWert(codeWert): Einladungscode \| None`|
+|`AbstimmungRepository`|`Abstimmung`|`speichern(abstimmung)`<br>`findeNachId(abstimmungId): Abstimmung \| None`<br>`findeAktive(jetzt): list[Abstimmung]`|
+|`StimmzettelRepository`|`Stimmzettel`|`speichern(stimmzettel)`<br>`findeNachId(stimmzettelId): Stimmzettel \| None`<br>`findeNachTeilnahme(abstimmungId, waehlerToken): Stimmzettel \| None`<br>`findeAlleZuAbstimmung(abstimmungId): list[Stimmzettel]`|
+|`ErgebnisRepository`|`Ergebnis`|`speichern(ergebnis)`<br>`findeNachAbstimmung(abstimmungId): Ergebnis \| None`|
+
+`findeNachEmail` und `findeNachTeilnahme` existieren nur, damit die Services die beiden Eindeutigkeitsregeln aus Schritt 4 prüfen können. Beide Regeln werden zusätzlich in der Datenbank abgesichert: `UNIQUE(email)` und `UNIQUE(abstimmung_id, waehler_token)`. Die Prüfung im Service verhindert den Normalfall, der Constraint den Wettlauf zweier gleichzeitiger Anfragen.
+
+Die Repository-Interfaces gehören zur Domänenschicht (Port). Ihre Implementierungen, zunächst im Speicher, liegen in der Infrastruktur (Adapter).
