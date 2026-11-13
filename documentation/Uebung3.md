@@ -586,3 +586,273 @@ Ein Repository verhält sich aus Sicht der Domäne wie eine Sammlung von Aggrega
 `findeNachEmail` und `findeNachTeilnahme` existieren nur, damit die Services die beiden Eindeutigkeitsregeln aus Schritt 4 prüfen können. Beide Regeln werden zusätzlich in der Datenbank abgesichert: `UNIQUE(email)` und `UNIQUE(abstimmung_id, waehler_token)`. Die Prüfung im Service verhindert den Normalfall, der Constraint den Wettlauf zweier gleichzeitiger Anfragen.
 
 Die Repository-Interfaces gehören zur Domänenschicht (Port). Ihre Implementierungen, zunächst im Speicher, liegen in der Infrastruktur (Adapter).
+
+
+
+
+
+## 6. Implementierungsstrategie
+
+### Vorgehen
+
+1. **Reihenfolge der Events:** Wir setzen die Events in der Reihenfolge um, in der sie fachlich aufeinander aufbauen: „Profil registriert“ und „Person verifiziert“ in der Benutzerverwaltung, dann „Abstimmung erstellt“ und „Abstimmung gestartet“ in der Abstimmungsverwaltung, dann „Stimme abgegeben“ als Core, zuletzt „Ergebnis ausgewertet“. Der Core kommt bewusst nicht zuerst, weil er die Schnittstellen der beiden anderen Contexts voraussetzt.
+2. **Von innen nach außen:** Pro Context zuerst Value Objects und Aggregate Root mit ihren Invarianten, dann das Repository-Interface, die In-Memory-Implementierung und den Service. Die Oberfläche folgt in einer späteren Übung.
+3. **Test zuerst (TDD):** Vor jeder Implementierung entsteht der Test. Jede Invariante aus Schritt 4 bekommt mindestens einen Test, der den verbotenen Fall prüft.
+4. **Modularität:** Jeder Bounded Context ist ein eigenes Python-Package. Contexts kennen einander nur über IDs, Events und die Interfaces aus Schritt 5.
+5. **Testbarkeit:** Die Domänenschicht kommt ohne Framework aus. Abhängigkeiten werden über den Konstruktor übergeben, Repositories stehen hinter Interfaces (`typing.Protocol`). Zeit wird als Parameter `jetzt` hereingereicht und nie im Aggregate mit `datetime.now()` gelesen, sonst ließen sich Fristen nicht testen.
+
+Die Package-Namen folgen der Festlegung aus Schritt 3:
+
+|Bounded Context|Package|
+|---|---|
+|Benutzerverwaltung (Onboarding)|`identity/`|
+|Abstimmungsverwaltung (Vorbereitung)|`abstimmung/`|
+|Abstimmungsdurchführung (Abstimmen)|`stimmabgabe/`|
+|Ergebnisverwaltung (Abschließen)|`auswertung/`|
+
+### Paketstruktur (Beispiel Benutzerverwaltung)
+
+```text
+evote
+└── identity
+    ├── domain
+    │   ├── model             PersonId, EmailAdresse, PasswortHash, Adresse, Rolle, Person,
+    │   │                     EinladungscodeId, EinladungscodeWert, Einladungscode
+    │   ├── repository        PersonRepository, EinladungscodeRepository (Interfaces, Ports)
+    │   └── service           RegistrierungsService (Domain Service)
+    ├── application           PersonService, EinladungscodeService
+    └── infrastructure        InMemoryPersonRepository, InMemoryEinladungscodeRepository (Adapter)
+```
+
+Die anderen Contexts (`abstimmung`, `stimmabgabe`, `auswertung`) folgen derselben Struktur. Die Domain Services `StimmabgabeService` und `WaehlerTokenService` liegen in `stimmabgabe.domain.service`.
+
+**Abhängigkeitsrichtung:** `application` und `infrastructure` kennen die Domäne, die Domäne kennt keine der beiden anderen Schichten. Zwischen den Contexts gelten nur die Pfeile der Context Map aus Schritt 3.
+
+### Das Domänenmodell im Code
+
+Die folgenden Auszüge zeigen die Benutzerverwaltung (Importe sind weggelassen). Die Methodennamen aus Schritt 4 werden im Code nach PEP 8 in snake_case geschrieben, `darfAbstimmen()` wird also zu `darf_abstimmen()`.
+
+```python
+@dataclass(frozen=True)
+class Adresse:
+    strasse: str
+    hausnummer: str
+    plz: str
+    ort: str
+
+    def __post_init__(self) -> None:
+        if not self.strasse.strip():
+            raise ValueError("Straße darf nicht leer sein")
+        if not self.hausnummer.strip():
+            raise ValueError("Hausnummer darf nicht leer sein")
+        if not re.fullmatch(r"\d{5}", self.plz):
+            raise ValueError("PLZ muss aus 5 Ziffern bestehen")
+        if not self.ort.strip():
+            raise ValueError("Ort darf nicht leer sein")
+```
+
+```python
+@dataclass(frozen=True)
+class PersonId:
+    wert: UUID
+
+    @staticmethod
+    def neu() -> "PersonId":
+        return PersonId(uuid4())
+
+
+class Rolle(Enum):
+    BUERGER = auto()
+    ADMIN = auto()
+```
+
+```python
+class Person:                                           # Aggregate Root
+    def __init__(self, person_id: PersonId, name: str, email: EmailAdresse,
+                 passwort_hash: PasswortHash, adresse: Adresse | None, rolle: Rolle):
+        self._id = person_id
+        self._name = name
+        self._email = email
+        self._passwort_hash = passwort_hash
+        self._adresse = adresse
+        self._rolle = rolle
+        self._verifiziert = False
+
+    # Factory-Methode: Event "Profil registriert"
+    @classmethod
+    def registrieren(cls, name: str, email: EmailAdresse,
+                     passwort: str, adresse: Adresse) -> "Person":
+        cls._pruefe_name(name)
+        if adresse is None:
+            raise ValueError("Adresse ist für Bürger erforderlich")
+        return cls(PersonId.neu(), name, email,
+                   PasswortHash.aus_klartext(passwort), adresse, Rolle.BUERGER)
+
+    # Factory-Methode: Event "Admin angelegt"
+    @classmethod
+    def als_admin_anlegen(cls, name: str, email: EmailAdresse, passwort: str) -> "Person":
+        cls._pruefe_name(name)
+        admin = cls(PersonId.neu(), name, email,
+                    PasswortHash.aus_klartext(passwort), None, Rolle.ADMIN)
+        admin._verifiziert = True      # Ein Admin braucht keinen Einladungscode
+        return admin
+
+    # Event "Person verifiziert"
+    def verifizieren(self) -> None:
+        self._verifiziert = True
+
+    def passwort_pruefen(self, klartext: str) -> bool:
+        return self._passwort_hash.passt_zu(klartext)
+
+    def darf_abstimmen(self) -> bool:
+        return self._rolle is Rolle.BUERGER and self._verifiziert
+
+    @staticmethod
+    def _pruefe_name(name: str) -> None:
+        if not name or not name.strip():
+            raise ValueError("Name darf nicht leer sein")
+
+    @property
+    def id(self) -> PersonId:
+        return self._id
+
+    @property
+    def adresse(self) -> Adresse | None:
+        return self._adresse
+```
+
+```python
+class PersonRepository(Protocol):          # Port: gehört zur Domänenschicht
+    def speichern(self, person: Person) -> None: ...
+    def finde_nach_id(self, person_id: PersonId) -> Person | None: ...
+    def finde_nach_email(self, email: EmailAdresse) -> Person | None: ...
+```
+
+```python
+class InMemoryPersonRepository:            # Adapter
+    def __init__(self) -> None:
+        self._speicher: dict[PersonId, Person] = {}
+
+    def speichern(self, person: Person) -> None:
+        self._speicher[person.id] = person
+
+    def finde_nach_id(self, person_id: PersonId) -> Person | None:
+        return self._speicher.get(person_id)
+
+    def finde_nach_email(self, email: EmailAdresse) -> Person | None:
+        return next((p for p in self._speicher.values() if p.email == email), None)
+```
+
+```python
+class RegistrierungsService:               # Domain Service: Regeln über mehrere Aggregates
+    def __init__(self, personen: PersonRepository, codes: EinladungscodeRepository):
+        self._personen = personen
+        self._codes = codes
+
+    def registriere(self, name: str, email: EmailAdresse,
+                    passwort: str, adresse: Adresse) -> PersonId:
+        # Fachregel über alle Person-Aggregates
+        if self._personen.finde_nach_email(email) is not None:
+            raise ValueError("Diese E-Mail-Adresse ist bereits registriert")
+        person = Person.registrieren(name, email, passwort, adresse)
+        self._personen.speichern(person)
+        return person.id
+
+    def verifiziere(self, person_id: PersonId, code_wert: EinladungscodeWert,
+                    jetzt: datetime) -> None:
+        person = self._personen.finde_nach_id(person_id)
+        if person is None:
+            raise ValueError("Person nicht gefunden")
+        code = self._codes.finde_nach_wert(code_wert)
+        if code is None:
+            raise ValueError("Code nicht gefunden")
+        # Fachregel über zwei Aggregates
+        if code.adresse != person.adresse:
+            raise ValueError("Der Code gehört zu einer anderen Adresse")
+        code.einloesen(person_id, jetzt)      # Invarianten liegen im Aggregate
+        person.verifizieren()
+        self._codes.speichern(code)
+        self._personen.speichern(person)
+```
+
+Der `StimmabgabeService` ist der Core. Er zeigt, wie die drei Regeln aus Schritt 4, die kein Aggregate allein sichern kann, auf einen Domain Service verteilt werden:
+
+```python
+class StimmabgabeService:                  # Domain Service im Context stimmabgabe
+    def __init__(self, stimmzettel: StimmzettelRepository, tokens: WaehlerTokenService,
+                 berechtigung: WahlberechtigungPruefer, abstimmungen: AbstimmungsInfo):
+        self._stimmzettel = stimmzettel
+        self._tokens = tokens
+        self._berechtigung = berechtigung
+        self._abstimmungen = abstimmungen
+
+    def stimme_abgeben(self, person_id: PersonId, abstimmung_id: AbstimmungId,
+                       option_id: OptionId, jetzt: datetime) -> StimmzettelId:
+        if not self._berechtigung.darf_abstimmen(person_id):          # ACL zu identity
+            raise ValueError("Diese Person darf nicht abstimmen")
+        if not self._abstimmungen.ist_offen(abstimmung_id, jetzt):    # zu abstimmung
+            raise ValueError("Die Abstimmung ist nicht offen")
+        if option_id not in self._abstimmungen.option_ids(abstimmung_id):
+            raise ValueError("Die Option gehört nicht zu dieser Abstimmung")
+
+        token = self._tokens.erzeuge_token(person_id, abstimmung_id)
+        if self._stimmzettel.finde_nach_teilnahme(abstimmung_id, token) is not None:
+            raise ValueError("Für diese Abstimmung wurde bereits abgestimmt")
+
+        zettel = Stimmzettel.abgeben(abstimmung_id, token, Stimme(option_id), jetzt)
+        self._stimmzettel.speichern(zettel)
+        return zettel.id
+```
+
+Ab dem Aufruf von `erzeuge_token` arbeitet der Context nur noch mit dem Token. Die `person_id` wird nicht an den `Stimmzettel` weitergereicht und steht in keiner gespeicherten Zeile des Contexts.
+
+### Erster Test (TDD, Schritt 1)
+
+```python
+class TestPerson:
+    adresse = Adresse("Musterstraße", "12", "10115", "Berlin")
+    email = EmailAdresse("anna@beispiel.de")
+
+    def test_registriert_gueltigen_buerger(self):
+        person = Person.registrieren("Anna Beispiel", self.email, "geheim123", self.adresse)
+        assert person.darf_abstimmen() is False      # noch nicht verifiziert
+
+    def test_verifizierter_buerger_darf_abstimmen(self):
+        person = Person.registrieren("Anna Beispiel", self.email, "geheim123", self.adresse)
+        person.verifizieren()
+        assert person.darf_abstimmen() is True
+
+    def test_admin_darf_nie_abstimmen(self):
+        admin = Person.als_admin_anlegen("Admin", EmailAdresse("admin@evote.de"), "geheim123")
+        admin.verifizieren()
+        assert admin.darf_abstimmen() is False
+
+    def test_lehnt_leeren_namen_ab(self):
+        with pytest.raises(ValueError):
+            Person.registrieren("  ", self.email, "geheim123", self.adresse)
+
+    def test_lehnt_adresse_ohne_hausnummer_ab(self):
+        with pytest.raises(ValueError):
+            Adresse("Musterstraße", "", "10115", "Berlin")
+```
+
+Name, Adresse und Rolle werden in der Aggregate Root beziehungsweise im Value Object geprüft und nicht im Service. Der `RegistrierungsService` ruft nur `Person.registrieren(…)` auf und prüft zusätzlich die eine Regel, die ein einzelnes Aggregate nicht sichern kann: die Eindeutigkeit der E-Mail-Adresse.
+
+### Offener Punkt: Erzeugung des WaehlerToken
+
+Der Hotspot „Stimme ändern vs. Anonymität“ aus Schritt 1 wird wie folgt gelöst: Das Token entsteht als `HMAC(geheimnis_der_abstimmung, personId)`. Es ist deterministisch, der Bürger findet seinen Stimmzettel also wieder, und es ist ohne das Geheimnis nicht umkehrbar.
+
+Die Grenze dieser Lösung gehört in die Dokumentation: Wer das Geheimnis und die Liste aller `personId` besitzt, kann die Tabelle nachrechnen und Stimmen zuordnen. Das Verfahren schützt also gegen Einsicht in die Datenbank, nicht gegen einen Betreiber mit vollem Zugriff. Eine Lösung ohne diese Lücke bräuchte ein Verfahren mit blinden Signaturen, bei dem der Context `identity` ein Wahlrecht bestätigt, ohne das spätere Token zu sehen. Das übersteigt den Rahmen dieser Übung und wird als bewusste Einschränkung festgehalten.
+
+---
+
+## 7. Ein Event durch alle sechs Schritte: „Stimme abgegeben“
+
+|Schritt|Ergebnis für das Event „Stimme abgegeben“|
+|---|---|
+|1 Event Storming|Die Bürgerin oder der Bürger (Akteur) löst den Command „Stimme abgeben“ aus, nachdem sie oder er die Abstimmung in der Übersicht gesehen hat (Read Model). Das Aggregat `Stimmzettel` trägt die Regel „nur verifizierte, max. 1 Stimme“. Hotspot: „Stimme ändern vs. Anonymität“.|
+|2 Domänenmodell|Entität `Stimmzettel` mit `abgegebenAm`; Value Object `Stimme`, das sich auf eine `Abstimmungsoption` bezieht. Zwischen `Person` und `Stimmzettel` wird bewusst keine Assoziation gezeichnet.|
+|3 Bounded Context|Abstimmungsdurchführung, der Core-Context. Er erhält „Person verifiziert“ und „Abstimmung gestartet“ und ist der einzige Context, der Stimmen kennt.|
+|4 Aggregate|`Stimmzettel` ist Aggregate Root, `Stimme` und `WaehlerToken` sind Value Objects. Invariante in der Root: Die Stimme zeigt auf genau eine `OptionId`. Fachmethode: `Stimmzettel.abgeben(abstimmungId, waehlerToken, stimme)`.|
+|5 Service und Repository|`StimmabgabeService.stimmeAbgeben(…)` prüft die drei Regeln über mehrere Aggregates (Berechtigung, offener Zeitraum, höchstens ein Stimmzettel) und speichert über `StimmzettelRepository.speichern(…)`. Ein Domain Service ist hier nötig, weil drei Aggregates aus drei Contexts beteiligt sind.|
+|6 Strategie|Zuerst die Tests (`StimmzettelTest`, `StimmabgabeServiceTest` mit Doubles für `WahlberechtigungPruefer` und `AbstimmungsInfo`), dann `Stimme` und `Stimmzettel`, dann `InMemoryStimmzettelRepository`, dann `WaehlerTokenService` und `StimmabgabeService`.|
