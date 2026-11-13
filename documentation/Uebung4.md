@@ -1,8 +1,11 @@
 # Übung 4: Advanced Java, Test-Driven Design (TDD) und LLM-gestütztes Entwickeln
 
 **Ziel:** In dieser Übung setzen Sie Ihre im vorherigen Übungsblatt entwickelte Implementierungsstrategie um. Sie beginnen, Ihr Domain-Driven-Design-Modell in Code zu überführen und wenden dabei Test-Driven Design (TDD) an. Der Fokus liegt auf der sauberen Implementierung Ihrer Domänenlogik unter Verwendung fortgeschrittener Java-Techniken, der Sicherstellung der Testbarkeit und dem kritisch-reflektierten Einsatz von LLMs.
+
 **Relevante Lerneinheiten:** AJV + TST (LE8) aus den Bachelorunterlagen
+
 **Bearbeitungsdauer:** eine Woche
+
 **Abgabe (optional):** Via Git-Repository bis zum 12.11.2026
 
 ---
