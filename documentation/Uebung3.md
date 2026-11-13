@@ -667,9 +667,16 @@ class Rolle(Enum):
 ```
 
 ```python
-class Person:                                           # Aggregate Root
-    def __init__(self, person_id: PersonId, name: str, email: EmailAdresse,
-                 passwort_hash: PasswortHash, adresse: Adresse | None, rolle: Rolle):
+class Person:  # Aggregate Root
+    def __init__(
+        self,
+        person_id: PersonId,
+        name: str,
+        email: EmailAdresse,
+        passwort_hash: PasswortHash,
+        adresse: Adresse | None,
+        rolle: Rolle,
+    ):
         self._id = person_id
         self._name = name
         self._email = email
@@ -680,21 +687,24 @@ class Person:                                           # Aggregate Root
 
     # Factory-Methode: Event "Profil registriert"
     @classmethod
-    def registrieren(cls, name: str, email: EmailAdresse,
-                     passwort: str, adresse: Adresse) -> "Person":
+    def registrieren(
+        cls, name: str, email: EmailAdresse, passwort: str, adresse: Adresse
+    ) -> "Person":
         cls._pruefe_name(name)
         if adresse is None:
             raise ValueError("Adresse ist für Bürger erforderlich")
-        return cls(PersonId.neu(), name, email,
-                   PasswortHash.aus_klartext(passwort), adresse, Rolle.BUERGER)
+        return cls(
+            PersonId.neu(), name, email, PasswortHash.aus_klartext(passwort), adresse, Rolle.BUERGER
+        )
 
     # Factory-Methode: Event "Admin angelegt"
     @classmethod
     def als_admin_anlegen(cls, name: str, email: EmailAdresse, passwort: str) -> "Person":
         cls._pruefe_name(name)
-        admin = cls(PersonId.neu(), name, email,
-                    PasswortHash.aus_klartext(passwort), None, Rolle.ADMIN)
-        admin._verifiziert = True      # Ein Admin braucht keinen Einladungscode
+        admin = cls(
+            PersonId.neu(), name, email, PasswortHash.aus_klartext(passwort), None, Rolle.ADMIN
+        )
+        admin._verifiziert = True  # Ein Admin braucht keinen Einladungscode
         return admin
 
     # Event "Person verifiziert"
@@ -722,14 +732,14 @@ class Person:                                           # Aggregate Root
 ```
 
 ```python
-class PersonRepository(Protocol):          # Port: gehört zur Domänenschicht
+class PersonRepository(Protocol):  # Port: gehört zur Domänenschicht
     def speichern(self, person: Person) -> None: ...
     def finde_nach_id(self, person_id: PersonId) -> Person | None: ...
     def finde_nach_email(self, email: EmailAdresse) -> Person | None: ...
 ```
 
 ```python
-class InMemoryPersonRepository:            # Adapter
+class InMemoryPersonRepository:  # Adapter
     def __init__(self) -> None:
         self._speicher: dict[PersonId, Person] = {}
 
@@ -744,13 +754,14 @@ class InMemoryPersonRepository:            # Adapter
 ```
 
 ```python
-class RegistrierungsService:               # Domain Service: Regeln über mehrere Aggregates
+class RegistrierungsService:  # Domain Service: Regeln über mehrere Aggregates
     def __init__(self, personen: PersonRepository, codes: EinladungscodeRepository):
         self._personen = personen
         self._codes = codes
 
-    def registriere(self, name: str, email: EmailAdresse,
-                    passwort: str, adresse: Adresse) -> PersonId:
+    def registriere(
+        self, name: str, email: EmailAdresse, passwort: str, adresse: Adresse
+    ) -> PersonId:
         # Fachregel über alle Person-Aggregates
         if self._personen.finde_nach_email(email) is not None:
             raise ValueError("Diese E-Mail-Adresse ist bereits registriert")
@@ -758,8 +769,9 @@ class RegistrierungsService:               # Domain Service: Regeln über mehrer
         self._personen.speichern(person)
         return person.id
 
-    def verifiziere(self, person_id: PersonId, code_wert: EinladungscodeWert,
-                    jetzt: datetime) -> None:
+    def verifiziere(
+        self, person_id: PersonId, code_wert: EinladungscodeWert, jetzt: datetime
+    ) -> None:
         person = self._personen.finde_nach_id(person_id)
         if person is None:
             raise ValueError("Person nicht gefunden")
@@ -769,7 +781,7 @@ class RegistrierungsService:               # Domain Service: Regeln über mehrer
         # Fachregel über zwei Aggregates
         if code.adresse != person.adresse:
             raise ValueError("Der Code gehört zu einer anderen Adresse")
-        code.einloesen(person_id, jetzt)      # Invarianten liegen im Aggregate
+        code.einloesen(person_id, jetzt)  # Invarianten liegen im Aggregate
         person.verifizieren()
         self._codes.speichern(code)
         self._personen.speichern(person)
@@ -778,19 +790,25 @@ class RegistrierungsService:               # Domain Service: Regeln über mehrer
 Der `StimmabgabeService` ist der Core. Er zeigt, wie die drei Regeln aus Schritt 4, die kein Aggregate allein sichern kann, auf einen Domain Service verteilt werden:
 
 ```python
-class StimmabgabeService:                  # Domain Service im Context stimmabgabe
-    def __init__(self, stimmzettel: StimmzettelRepository, tokens: WaehlerTokenService,
-                 berechtigung: WahlberechtigungPruefer, abstimmungen: AbstimmungsInfo):
+class StimmabgabeService:  # Domain Service im Context stimmabgabe
+    def __init__(
+        self,
+        stimmzettel: StimmzettelRepository,
+        tokens: WaehlerTokenService,
+        berechtigung: WahlberechtigungPruefer,
+        abstimmungen: AbstimmungsInfo,
+    ):
         self._stimmzettel = stimmzettel
         self._tokens = tokens
         self._berechtigung = berechtigung
         self._abstimmungen = abstimmungen
 
-    def stimme_abgeben(self, person_id: PersonId, abstimmung_id: AbstimmungId,
-                       option_id: OptionId, jetzt: datetime) -> StimmzettelId:
-        if not self._berechtigung.darf_abstimmen(person_id):          # ACL zu identity
+    def stimme_abgeben(
+        self, person_id: PersonId, abstimmung_id: AbstimmungId, option_id: OptionId, jetzt: datetime
+    ) -> StimmzettelId:
+        if not self._berechtigung.darf_abstimmen(person_id):  # ACL zu identity
             raise ValueError("Diese Person darf nicht abstimmen")
-        if not self._abstimmungen.ist_offen(abstimmung_id, jetzt):    # zu abstimmung
+        if not self._abstimmungen.ist_offen(abstimmung_id, jetzt):  # zu abstimmung
             raise ValueError("Die Abstimmung ist nicht offen")
         if option_id not in self._abstimmungen.option_ids(abstimmung_id):
             raise ValueError("Die Option gehört nicht zu dieser Abstimmung")
@@ -815,7 +833,7 @@ class TestPerson:
 
     def test_registriert_gueltigen_buerger(self):
         person = Person.registrieren("Anna Beispiel", self.email, "geheim123", self.adresse)
-        assert person.darf_abstimmen() is False      # noch nicht verifiziert
+        assert person.darf_abstimmen() is False  # noch nicht verifiziert
 
     def test_verifizierter_buerger_darf_abstimmen(self):
         person = Person.registrieren("Anna Beispiel", self.email, "geheim123", self.adresse)
