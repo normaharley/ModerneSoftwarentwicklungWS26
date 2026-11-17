@@ -245,7 +245,7 @@ Implementieren Sie die Domänenlogik, die Ihre Tests erfüllt. Nutzen Sie das LL
 #### LLM-Einsatz
 
 - **Werkzeug:** Claude (Opus 5.5) in Claude Code, VS Code, als Pair-Programming-Partner. Das LLM schlägt vor und begründet, wir entscheiden.
-- **Code:** [identity/value_objects.py](../src/modernesoftwarentwicklungws26/identity/value_objects.py), Tests: [tests/identity/test_value_objects.py](../tests/identity/test_value_objects.py).
+- **Code:** [identity/domain/model/value_objects.py](../src/modernesoftwarentwicklungws26/identity/domain/model/value_objects.py), Tests: [tests/identity/test_value_objects.py](../tests/identity/test_value_objects.py).
 
 #### TDD-Zyklen
 
@@ -253,8 +253,11 @@ Implementieren Sie die Domänenlogik, die Ihre Tests erfüllt. Nutzen Sie das LL
 |---|---|---|---|
 | 1 | 125 Tests aus Aufgabe 2 scheitern beim Import (`ModuleNotFoundError`) | `EmailAdresse`, `Adresse`, `EinladungscodeWert` mit den geprüften Regexes | 125/125 grün, 100 % Coverage |
 | 2 | 3 neue Tests für `EinladungscodeWert.neu()` scheitern mit `AttributeError` | Factory mit `secrets.choice` über das Crockford-Alphabet | 128/128 grün, 100 % Coverage |
+| 3 | 26 Tests für den Shared Kernel scheitern beim Import ([test_ids.py](../tests/shared_kernel/test_ids.py), [test_events.py](../tests/shared_kernel/test_events.py)) | [shared_kernel/ids.py](../src/modernesoftwarentwicklungws26/shared_kernel/ids.py): `EntitaetsId` → `PersonId`, `AbstimmungId`, `OptionId`; [shared_kernel/events.py](../src/modernesoftwarentwicklungws26/shared_kernel/events.py): `DomainEvent` | 155/155 grün (gesamt), 100 % Coverage |
 
 Die Factory-Tests prüfen gültiges Format, Eindeutigkeit von 1000 Codes und dass jedes der 32 Zeichen vorkommt. Die Wahrscheinlichkeit für einen Fehlalarm liegt bei etwa 10⁻¹⁶⁴, die Tests sind also nicht flaky. Dass `secrets` statt `random` verwendet wird, prüfen wir bewusst nicht per Test, weil das den Test an die Implementierung koppeln würde. Das gehört ins Code-Review.
+
+Die wichtigsten Shared-Kernel-Tests: `PersonId(u) != AbstimmungId(u)` bei gleicher UUID (typsichere IDs) und `DomainEvent` hat genau das Feld `zeitpunkt`. Der zweite Test schreibt die Ablehnung von V4 aus Aufgabe 1 fest: keine Metadaten mit Personenbezug, also kein Risiko für das Wahlgeheimnis.
 
 #### Abweichungen von der Vorgabe
 
@@ -267,6 +270,10 @@ Die Factory-Tests prüfen gültiges Format, Eindeutigkeit von 1000 Codes und das
 | A5 | „zufällig erzeugt“, keine API festgelegt | zusätzliche Factory `EinladungscodeWert.neu()` | Ohne Factory ist „zufällig erzeugt“ nicht umgesetzt. `secrets`, weil Codes aus `random` (Mersenne-Twister) vorhersagbar wären. |
 | A6 | – | Alphabet steht zweimal im Code: als String für `neu()` und als Regex-Zeichenklasse | Die Regex bleibt so lesbar wie in Aufgabe 2 dokumentiert. Dass beide übereinstimmen, sichern die Tests ab („jedes erlaubte Zeichen“, „nutzt das ganze Alphabet“). |
 | A7 | Tests komplett in Aufgabe 2 | Die Factory-Tests sind erst in Aufgabe 3 entstanden, aber vor dem Code (Zyklus 2) | in Aufgabe 2 als „bewusst offen“ markiert |
+| A8 | Shared Kernel = `PersonId`, `AbstimmungId`, `OptionId`, `StimmzettelId` + `DomainEvent` (Aufgabe 1) | ohne `StimmzettelId`, die kommt nach `stimmabgabe` | Nur IDs, die laut Context Map (Übung 3) eine Context-Grenze überqueren, gehören in den Shared Kernel. `StimmzettelId` nutzt nur `stimmabgabe`, und `StimmeAbgegeben` ist intern. |
+| A11 | Paketstruktur aus Übung 3, Kap. 6: `identity/domain/model/` mit u. a. `PersonId` | Value Objects zuerst flach in `identity/value_objects.py`, nach Zyklus 3 nach `identity/domain/model/value_objects.py` verschoben; `PersonId` liegt im `shared_kernel` | Die Struktur aus Übung 3 gilt jetzt, solange es erst eine Datei gibt. Der `shared_kernel` hat keine Schichten, weil er nur Domänentypen enthält. `PersonId` liegt dort, weil `stimmabgabe` sie braucht (A8). |
+| A9 | ID-Klassen einzeln mit `neu()` als `@staticmethod` (Übung 3, Kap. 6) | gemeinsame Basisklasse `EntitaetsId` mit `@classmethod neu() -> Self` | Alle IDs sind exakt gleich aufgebaut, hier lohnt die Vererbung (anders als bei V-B). Neu dazu: `TypeError`, wenn `wert` keine UUID ist (wie A4). |
+| A10 | Übung 3, Kap. 6: `Adresse` prüft die PLZ mit `\d{5}` | `[0-9]{5}` | `\d` akzeptiert Unicode-Ziffern (Befund aus Aufgabe 2); der Code-Auszug in Übung 3 ist damit überholt |
 
 #### Implementierungsvarianten
 

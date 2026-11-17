@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from modernesoftwarentwicklungws26.identity.value_objects import (
+from modernesoftwarentwicklungws26.identity.domain.model.value_objects import (
     Adresse,
     EinladungscodeWert,
     EmailAdresse,
