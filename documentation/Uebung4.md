@@ -233,12 +233,52 @@ Implementieren Sie die Domänenlogik, die Ihre Tests erfüllt. Nutzen Sie das LL
 
 **Vorgehen:**
 
-- [ ] **Code-Generierung:** Lassen Sie das LLM eine erste Implementierung generieren, die Ihre Tests besteht
+- [x] **Code-Generierung:** Lassen Sie das LLM eine erste Implementierung generieren, die Ihre Tests besteht
 - [ ] **Iterative Verbesserung:** Bitten Sie das LLM, fortgeschrittene Java-Techniken einzusetzen (Streams, Generics, Lambdas, Optional, Record-Types). Lassen Sie verschiedene Implementierungsvarianten vorschlagen. Fordern Sie Erklärungen für verwendete Patterns
 - [ ] **Kritische Qualitätsprüfung:** Verstehen Sie den generierten Code vollständig? Entspricht er den DDD-Prinzipien? Ist er wartbar und lesbar? Erfüllt er alle Tests?
 - [ ] **Code-Review mit LLM:** Lassen Sie das LLM Ihren finalen Code reviewen und nach möglichen Bugs oder Verbesserungen suchen
 
 **Ziel/Output:** Funktionierende, getestete Implementierung Ihrer Domänenlogik. Dokumentation (ca. 10-12 Sätze): Beschreiben Sie den Pair-Programming-Prozess mit dem LLM. Welche Vorschläge waren hilfreich? Wo mussten Sie korrigieren? Welche Java-Techniken hat das LLM gut/schlecht eingesetzt?
+
+### Bearbeitung
+
+#### LLM-Einsatz
+
+- **Werkzeug:** Claude (Opus 5.5) in Claude Code, VS Code, als Pair-Programming-Partner. Das LLM schlägt vor und begründet, wir entscheiden.
+- **Code:** [identity/value_objects.py](../src/modernesoftwarentwicklungws26/identity/value_objects.py), Tests: [tests/identity/test_value_objects.py](../tests/identity/test_value_objects.py).
+
+#### TDD-Zyklen
+
+| # | Rot | Grün | Stand |
+|---|---|---|---|
+| 1 | 125 Tests aus Aufgabe 2 scheitern beim Import (`ModuleNotFoundError`) | `EmailAdresse`, `Adresse`, `EinladungscodeWert` mit den geprüften Regexes | 125/125 grün, 100 % Coverage |
+| 2 | 3 neue Tests für `EinladungscodeWert.neu()` scheitern mit `AttributeError` | Factory mit `secrets.choice` über das Crockford-Alphabet | 128/128 grün, 100 % Coverage |
+
+Die Factory-Tests prüfen gültiges Format, Eindeutigkeit von 1000 Codes und dass jedes der 32 Zeichen vorkommt. Die Wahrscheinlichkeit für einen Fehlalarm liegt bei etwa 10⁻¹⁶⁴, die Tests sind also nicht flaky. Dass `secrets` statt `random` verwendet wird, prüfen wir bewusst nicht per Test, weil das den Test an die Implementierung koppeln würde. Das gehört ins Code-Review.
+
+#### Abweichungen von der Vorgabe
+
+| # | Vorgabe (Prompt/Aufgabe 2) | Umsetzung | Begründung |
+|---|---|---|---|
+| A1 | JUnit, Java-Techniken | pytest, Python-Entsprechungen | siehe [Anpassung auf Python](#anpassung-auf-python) |
+| A2 | `re.fullmatch(muster, wert)` | vorkompiliert: `_PLZ = re.compile(...)`, dann `_PLZ.fullmatch(wert)` | gleiches Verhalten; jede Regex wird nur einmal gebaut und hat einen Namen |
+| A3 | jedes Adressfeld auf „nicht leer“ prüfen | eine Schleife über `dataclasses.fields(self)` | ein neues Feld wird automatisch mitgeprüft |
+| A4 | „bei ungültiger Eingabe `ValueError`“ | eine PLZ als `int` löst `TypeError` aus (aus `re`), nicht `ValueError` | **entschieden: `TypeError` bleibt** und ist im Test festgeschrieben. Ein falscher Typ ist ein Programmierfehler, ein ungültiger Wert ein Fachfehler. Das ist idiomatisches Python und kommt ohne `isinstance`-Prüfungen in jedem Value Object aus. |
+| A5 | „zufällig erzeugt“, keine API festgelegt | zusätzliche Factory `EinladungscodeWert.neu()` | Ohne Factory ist „zufällig erzeugt“ nicht umgesetzt. `secrets`, weil Codes aus `random` (Mersenne-Twister) vorhersagbar wären. |
+| A6 | – | Alphabet steht zweimal im Code: als String für `neu()` und als Regex-Zeichenklasse | Die Regex bleibt so lesbar wie in Aufgabe 2 dokumentiert. Dass beide übereinstimmen, sichern die Tests ab („jedes erlaubte Zeichen“, „nutzt das ganze Alphabet“). |
+| A7 | Tests komplett in Aufgabe 2 | Die Factory-Tests sind erst in Aufgabe 3 entstanden, aber vor dem Code (Zyklus 2) | in Aufgabe 2 als „bewusst offen“ markiert |
+
+#### Implementierungsvarianten
+
+Das LLM hat drei Varianten vorgeschlagen, die alle dieselben 129 Tests bestehen:
+
+| Variante | Idee | Entscheidung | Begründung |
+|---|---|---|---|
+| V-A | jede Klasse prüft selbst mit `if not …fullmatch(…): raise ValueError(…)` | ersetzt | dreimal dasselbe `if`/`raise`, Fehlermeldungen in drei verschiedenen Formaten |
+| V-B | Basisklasse `RegexValueObject` mit Klassenattribut `_muster` (Template Method) | **abgelehnt** | passt nur zu Value Objects mit einem einzigen Feld; `Adresse` (4 Felder, 2 Muster) und das Kleinschreiben bei `EmailAdresse` bräuchten Haken für Sonderfälle in der Basisklasse, also mehr Code statt weniger |
+| V-C | Hilfsfunktion `_pruefe(muster, wert, bezeichnung)`, die Klassen rufen sie in `__post_init__` auf (Komposition statt Vererbung) | **übernommen** | jede Prüfung ist eine Zeile, einheitliche Meldungen (`plz ist ungültig: '2672'`), keine Vererbungshierarchie |
+
+Refactoring von V-A zu V-C: Die Tests sind vorher und nachher grün (129/129), die Coverage bleibt bei 100 %.
 
 ---
 

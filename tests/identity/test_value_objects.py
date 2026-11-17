@@ -3,6 +3,7 @@
 import dataclasses
 
 import pytest
+
 from modernesoftwarentwicklungws26.identity.value_objects import (
     Adresse,
     EinladungscodeWert,
@@ -160,9 +161,10 @@ def test_adresse_ungueltige_plz_wirft_value_error(plz: str) -> None:
         adresse(plz=plz)
 
 
-def test_adresse_plz_als_int_wird_abgelehnt() -> None:
-    # 01067 als int wäre 1067 – die führende Null ginge verloren
-    with pytest.raises((TypeError, ValueError)):
+def test_adresse_plz_als_int_wirft_type_error() -> None:
+    # 01067 als int wäre 1067 – die führende Null ginge verloren.
+    # Falscher Typ ist ein Programmierfehler (TypeError), kein ungültiger Wert (ValueError).
+    with pytest.raises(TypeError):
         adresse(plz=1067)
 
 
@@ -224,3 +226,23 @@ def test_einladungscode_ist_unveraenderlich() -> None:
     code = EinladungscodeWert("7K3QX9M2HZ4R")
     with pytest.raises(dataclasses.FrozenInstanceError):
         code.wert = "000000000000"  # type: ignore[misc]
+
+
+# --- Factory: zufällige Erzeugung -------------------------------------------
+
+
+def test_einladungscode_neu_erzeugt_gueltigen_code() -> None:
+    code = EinladungscodeWert.neu()
+    assert isinstance(code, EinladungscodeWert)
+    assert len(code.wert) == LAENGE
+
+
+def test_einladungscode_neu_erzeugt_unterschiedliche_codes() -> None:
+    codes = {EinladungscodeWert.neu() for _ in range(1000)}
+    assert len(codes) == 1000
+
+
+def test_einladungscode_neu_nutzt_das_ganze_alphabet() -> None:
+    # 12 000 Zeichen über 32 Symbole: P(ein Zeichen fehlt) ≈ 32 · (31/32)^12000 ≈ 1e-164
+    gesehen = set("".join(EinladungscodeWert.neu().wert for _ in range(1000)))
+    assert gesehen == set(ALPHABET)
