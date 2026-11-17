@@ -1,4 +1,4 @@
-# Übung 3: Systemarchitektzur Ihres Projekts modellieren
+# Übung 3: Systemarchitektur Ihres Projekts modellieren
 
 ## 1. Event Storming: eVote
 
