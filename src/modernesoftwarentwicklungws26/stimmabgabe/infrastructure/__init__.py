@@ -1,0 +1,1 @@
+"""Adapter des Context ``stimmabgabe``."""

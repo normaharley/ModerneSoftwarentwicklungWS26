@@ -234,9 +234,9 @@ Implementieren Sie die Domänenlogik, die Ihre Tests erfüllt. Nutzen Sie das LL
 **Vorgehen:**
 
 - [x] **Code-Generierung:** Lassen Sie das LLM eine erste Implementierung generieren, die Ihre Tests besteht
-- [ ] **Iterative Verbesserung:** Bitten Sie das LLM, fortgeschrittene Java-Techniken einzusetzen (Streams, Generics, Lambdas, Optional, Record-Types). Lassen Sie verschiedene Implementierungsvarianten vorschlagen. Fordern Sie Erklärungen für verwendete Patterns
+- [x] **Iterative Verbesserung:** Bitten Sie das LLM, fortgeschrittene Java-Techniken einzusetzen (Streams, Generics, Lambdas, Optional, Record-Types). Lassen Sie verschiedene Implementierungsvarianten vorschlagen. Fordern Sie Erklärungen für verwendete Patterns
 - [ ] **Kritische Qualitätsprüfung:** Verstehen Sie den generierten Code vollständig? Entspricht er den DDD-Prinzipien? Ist er wartbar und lesbar? Erfüllt er alle Tests?
-- [ ] **Code-Review mit LLM:** Lassen Sie das LLM Ihren finalen Code reviewen und nach möglichen Bugs oder Verbesserungen suchen
+- [x] **Code-Review mit LLM:** Lassen Sie das LLM Ihren finalen Code reviewen und nach möglichen Bugs oder Verbesserungen suchen
 
 **Ziel/Output:** Funktionierende, getestete Implementierung Ihrer Domänenlogik. Dokumentation (ca. 10-12 Sätze): Beschreiben Sie den Pair-Programming-Prozess mit dem LLM. Welche Vorschläge waren hilfreich? Wo mussten Sie korrigieren? Welche Java-Techniken hat das LLM gut/schlecht eingesetzt?
 
@@ -256,6 +256,9 @@ Implementieren Sie die Domänenlogik, die Ihre Tests erfüllt. Nutzen Sie das LL
 | 3 | 26 Tests für den Shared Kernel scheitern beim Import ([test_ids.py](../tests/shared_kernel/test_ids.py), [test_events.py](../tests/shared_kernel/test_events.py)) | [shared_kernel/ids.py](../src/modernesoftwarentwicklungws26/shared_kernel/ids.py): `EntitaetsId` → `PersonId`, `AbstimmungId`, `OptionId`; [shared_kernel/events.py](../src/modernesoftwarentwicklungws26/shared_kernel/events.py): `DomainEvent` | 155/155 grün (gesamt), 100 % Coverage |
 | 4 | 10 Tests für `StimmzettelId` und `Stimme` ([tests/stimmabgabe/test_value_objects.py](../tests/stimmabgabe/test_value_objects.py)); erst rot aus falschem Grund (gleichnamige Testmodule, A12), dann richtig rot (`ModuleNotFoundError`) | [stimmabgabe/domain/model/value_objects.py](../src/modernesoftwarentwicklungws26/stimmabgabe/domain/model/value_objects.py): `StimmzettelId` (lokal, A8), `Stimme` mit `OptionId`-Prüfung | 165/165 grün, 100 % Coverage |
 | 5 | 21 Tests für `WaehlerToken` und `WaehlerTokenService` ([test_waehler_token_service.py](../tests/stimmabgabe/test_waehler_token_service.py)) scheitern beim Import | `WaehlerToken` (64 Hex-Zeichen), [WaehlerTokenService](../src/modernesoftwarentwicklungws26/stimmabgabe/domain/service/waehler_token_service.py): `HMAC-SHA256(geheimnis, person.bytes + abstimmung.bytes)` | 186/186 grün, 100 % Coverage |
+| 6 | 20 Tests für Aggregate und Service ([test_stimmzettel.py](../tests/stimmabgabe/test_stimmzettel.py), [test_stimmabgabe_service.py](../tests/stimmabgabe/test_stimmabgabe_service.py)) scheitern beim Import | [Stimmzettel](../src/modernesoftwarentwicklungws26/stimmabgabe/domain/model/stimmzettel.py) + Event `StimmeAbgegeben`, `StimmzettelRepository` (Protocol), `InMemoryStimmzettelRepository`, [StimmabgabeService](../src/modernesoftwarentwicklungws26/stimmabgabe/domain/service/stimmabgabe_service.py) mit Test-Doubles für `WahlberechtigungPruefer` und `AbstimmungsInfo` | 206/206 grün, 100 % Coverage |
+
+**Core `stimmabgabe` (Zyklus 6):** Der Service folgt der Skizze aus Übung 3, Kap. 6. Die Test-Doubles erlauben standardmäßig alles, und jeder Negativtest schaltet genau eine Bedingung ab (gesperrte Person, geschlossene Abstimmung, fremde Option, zweite Stimme). So reicht `ValueError` wie in Übung 3, ohne eigene Exception-Klassen. Ein Test prüft am gespeicherten Stimmzettel, dass weder `PersonId` noch die UUID der Person darin vorkommt.
 
 Die Factory-Tests prüfen gültiges Format, Eindeutigkeit von 1000 Codes und dass jedes der 32 Zeichen vorkommt. Die Wahrscheinlichkeit für einen Fehlalarm liegt bei etwa 10⁻¹⁶⁴, die Tests sind also nicht flaky. Dass `secrets` statt `random` verwendet wird, prüfen wir bewusst nicht per Test, weil das den Test an die Implementierung koppeln würde. Das gehört ins Code-Review.
 
@@ -278,13 +281,15 @@ Die wichtigsten Shared-Kernel-Tests: `PersonId(u) != AbstimmungId(u)` bei gleich
 | A3 | jedes Adressfeld auf „nicht leer“ prüfen | eine Schleife über `dataclasses.fields(self)` | ein neues Feld wird automatisch mitgeprüft |
 | A4 | „bei ungültiger Eingabe `ValueError`“ | eine PLZ als `int` löst `TypeError` aus (aus `re`), nicht `ValueError` | **entschieden: `TypeError` bleibt** und ist im Test festgeschrieben. Ein falscher Typ ist ein Programmierfehler, ein ungültiger Wert ein Fachfehler. Das ist idiomatisches Python und kommt ohne `isinstance`-Prüfungen in jedem Value Object aus. |
 | A5 | „zufällig erzeugt“, keine API festgelegt | zusätzliche Factory `EinladungscodeWert.neu()` | Ohne Factory ist „zufällig erzeugt“ nicht umgesetzt. `secrets`, weil Codes aus `random` (Mersenne-Twister) vorhersagbar wären. |
-| A6 | – | Alphabet steht zweimal im Code: als String für `neu()` und als Regex-Zeichenklasse | Die Regex bleibt so lesbar wie in Aufgabe 2 dokumentiert. Dass beide übereinstimmen, sichern die Tests ab („jedes erlaubte Zeichen“, „nutzt das ganze Alphabet“). |
+| A6 | – | ~~Alphabet steht zweimal im Code~~ **erledigt in Aufgabe 4 (R3):** Die Regex wird aus `_EINLADUNGSCODE_ALPHABET` und `_EINLADUNGSCODE_LAENGE` gebaut | Eine Stelle statt zwei. Dass das gebaute Muster stimmt, sichern dieselben Tests wie vorher („jedes erlaubte Zeichen“, „verbotenes Zeichen“). |
 | A7 | Tests komplett in Aufgabe 2 | Die Factory-Tests sind erst in Aufgabe 3 entstanden, aber vor dem Code (Zyklus 2) | in Aufgabe 2 als „bewusst offen“ markiert |
 | A8 | Shared Kernel = `PersonId`, `AbstimmungId`, `OptionId`, `StimmzettelId` + `DomainEvent` (Aufgabe 1) | ohne `StimmzettelId`, die kommt nach `stimmabgabe` | Nur IDs, die laut Context Map (Übung 3) eine Context-Grenze überqueren, gehören in den Shared Kernel. `StimmzettelId` nutzt nur `stimmabgabe`, und `StimmeAbgegeben` ist intern. |
 | A11 | Paketstruktur aus Übung 3, Kap. 6: `identity/domain/model/` mit u. a. `PersonId` | Value Objects zuerst flach in `identity/value_objects.py`, nach Zyklus 3 nach `identity/domain/model/value_objects.py` verschoben; `PersonId` liegt im `shared_kernel` | Die Struktur aus Übung 3 gilt jetzt, solange es erst eine Datei gibt. Der `shared_kernel` hat keine Schichten, weil er nur Domänentypen enthält. `PersonId` liegt dort, weil `stimmabgabe` sie braucht (A8). |
 | A12 | pytest-Standardkonfiguration | `--import-mode=importlib` in `pyproject.toml` | `tests/identity/` und `tests/stimmabgabe/` haben beide eine `test_value_objects.py`; im Standardmodus bricht pytest beim Einsammeln ab. `importlib` ist der von pytest empfohlene Modus für neue Projekte. |
 | A13 | A4: keine `isinstance`-Prüfungen | `EntitaetsId` und `Stimme` prüfen den Typ explizit (`TypeError`) | Bei Strings scheitert `re` von selbst. Bei IDs würde nichts scheitern: `Stimme(AbstimmungId(...))` ginge still durch, weil Python Typhinweise nicht zur Laufzeit prüft. |
 | A14 | Geheimnis „per Konstruktor“ (Aufgabe 1, S7), keine weiteren Vorgaben | Geheimnis muss `bytes` sein (`TypeError`) und mindestens 32 Bytes haben (`ValueError`) | Eigene Sicherheitsentscheidung: 32 Bytes entsprechen der Ausgabelänge von SHA-256 und der üblichen Empfehlung für HMAC-Schlüssel. Ein kurzes Geheimnis ließe sich durchprobieren. |
+| A15 | Übung 3, Kap. 5: `StimmzettelRepository.findeNachId`, Event `StimmeGeaendert`; Aufgabe 1 (V2): Service veröffentlicht Events | weggelassen | Kein Aufrufer braucht sie bisher. `StimmeAbgegeben` ist intern ohne Empfänger, ein Publisher hätte nichts zu tun. Kommt, sobald es einen Empfänger gibt. |
+| A16 | Übung 3, Kap. 4: `abgeben(abstimmungId, waehlerToken, stimme)` | `abgeben(…, jetzt)`; `jetzt` muss eine Zeitzone haben (`ValueError`) | Zeit wird hereingereicht (Übung 3, Regel 5). Ohne Zeitzonenprüfung stürzt `aendern` beim Mischen von `datetime.now()` und `datetime.now(UTC)` mit `TypeError` ab (Aufgabe 4, R2). |
 | A9 | ID-Klassen einzeln mit `neu()` als `@staticmethod` (Übung 3, Kap. 6) | gemeinsame Basisklasse `EntitaetsId` mit `@classmethod neu() -> Self` | Alle IDs sind exakt gleich aufgebaut, hier lohnt die Vererbung (anders als bei V-B). Neu dazu: `TypeError`, wenn `wert` keine UUID ist (wie A4). |
 | A10 | Übung 3, Kap. 6: `Adresse` prüft die PLZ mit `\d{5}` | `[0-9]{5}` | `\d` akzeptiert Unicode-Ziffern (Befund aus Aufgabe 2); der Code-Auszug in Übung 3 ist damit überholt |
 
@@ -308,11 +313,26 @@ Erweitern Sie Ihre Tests, um auch Randfälle und Fehlerbedingungen abzudecken.
 
 **Vorgehen:**
 
-- [ ] **Test-Erweiterung:** Lassen Sie das LLM zusätzliche Edge-Cases und Fehlerbedingungen identifizieren
-- [ ] **Refactoring-Vorschläge:** Bitten Sie das LLM um Vorschläge für sog. „Code-Smells“ in Ihrer Implementierung, Verbesserung der Code-Lesbarkeit, Performance-Optimierungen sowie bessere Verwendung von Java-Features
-- [ ] **Systematisches Refactoring:** Implementieren Sie die sinnvollen Vorschläge schrittweise. Stellen Sie sicher, dass alle Tests weiterhin bestehen. Lassen Sie bei Unsicherheiten das LLM die Änderungen erklären.
+- [x] **Test-Erweiterung:** Lassen Sie das LLM zusätzliche Edge-Cases und Fehlerbedingungen identifizieren
+- [x] **Refactoring-Vorschläge:** Bitten Sie das LLM um Vorschläge für sog. „Code-Smells“ in Ihrer Implementierung, Verbesserung der Code-Lesbarkeit, Performance-Optimierungen sowie bessere Verwendung von Java-Features
+- [x] **Systematisches Refactoring:** Implementieren Sie die sinnvollen Vorschläge schrittweise. Stellen Sie sicher, dass alle Tests weiterhin bestehen. Lassen Sie bei Unsicherheiten das LLM die Änderungen erklären.
 
 **Ziel/Output:** Erweiterte Testsuite mit Edge-Cases; refaktorisierter, optimierter Code. Dokumentation (ca. 5-6 Sätze): Welche Refactoring-Vorschläge haben Sie umgesetzt? Welche waren nicht sinnvoll und warum?
+
+### Bearbeitung
+
+- **Werkzeug:** Claude Code mit dem Plugin [Ponytail](https://github.com/DietrichGebert/ponytail) (v5.1.0), Skill `ponytail-audit`. Es prüft die ganze Codebasis in der Reihenfolge: korrekt, sicher, hält Last aus, getestet, schnell, schlank. Jeder Befund braucht einen konkreten Fall, der ihn belegt.
+- **Umfang:** alle Dateien unter `src/` und `tests/`, `pyproject.toml`, `Makefile` und die CI. Angenommene Last: Tests und ein einzelner Prozess, ein späterer Webbetrieb ist absehbar.
+
+| # | Befund | Art | Entscheidung |
+|---|---|---|---|
+| R1 | `zaehle_stimmen` liefert auch während einer offenen Abstimmung einen Zwischenstand | Risiko (Wahlgeheimnis/Beeinflussung) | **offen**, fachliche Entscheidung: braucht einen Parameter `jetzt` und ändert die Schnittstelle `StimmenAbfrage` |
+| R2 | `Stimmzettel.aendern` stürzt mit `TypeError` ab, wenn naive und aware `datetime`s gemischt werden (nachgeprüft) | Bug | **umgesetzt:** `_mit_zeitzone()` lehnt Zeitpunkte ohne Zeitzone beim Abgeben und Ändern mit `ValueError` ab; 2 neue Tests (erst rot, dann grün) |
+| R3 | Alphabet und Länge des Einladungscodes stehen doppelt (Konstanten und Regex) | schlank (zusammenführen) | **umgesetzt:** Regex aus den Konstanten gebaut, löst A6 aus Aufgabe 3 auf |
+| R4 | `main()` gibt nur „Hello from …“ aus (Rest der Projektvorlage) | schlank (löschen) | **offen:** betrifft README, `pyproject.toml` und `test_main.py` |
+| – | Race Condition zwischen Prüfen und Speichern bei doppelter Stimmabgabe, lineare Suche im In-Memory-Repository | – | kein Befund: im Code als `shortcut:` mit Grenze markiert (UNIQUE-Constraint und Index in der Datenbank) |
+
+Nach jedem Schritt ist `make check` grün: 208 Tests, 100 % Coverage, Ruff ohne Befund. Nicht sinnvoll war kein Vorschlag. Zwei Vorschläge (R1, R4) haben wir aber bewusst nicht direkt umgesetzt, weil sie eine Schnittstelle bzw. die Projektvorlage ändern und damit eine Entscheidung des Teams sind.
 
 ---
 

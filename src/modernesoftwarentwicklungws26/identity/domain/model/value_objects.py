@@ -21,7 +21,7 @@ _PLZ = re.compile(r"[0-9]{5}")
 # Crockford-Base32 ohne die verwechselbaren Buchstaben I, L, O, U.
 _EINLADUNGSCODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 _EINLADUNGSCODE_LAENGE = 12
-_EINLADUNGSCODE = re.compile(r"[0-9A-HJKMNP-TV-Z]{12}")
+_EINLADUNGSCODE = re.compile(f"[{_EINLADUNGSCODE_ALPHABET}]{{{_EINLADUNGSCODE_LAENGE}}}")
 
 
 def _pruefe(muster: re.Pattern[str], wert: str, bezeichnung: str) -> None:
