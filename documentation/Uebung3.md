@@ -8,15 +8,15 @@
 flowchart LR
   rm[("<b>Read Model (Grün)</b><br>Information, die ein<br>Akteur zum Entscheiden sieht")]:::readmodel
   ak["<b>Akteur (Gelb)</b><br>Wer löst etwas aus?"]:::actor
-  cmd["<b>Command (Blau)</b><br>Absicht / Aktion<br>(Imperativ)"]:::command
+  cmd["<b>Command (Blau)</b><br>Absicht / Aktion (Imperativ)<br><i>ausgelöst durch Akteur</i>"]:::command
   ag["<b>Aggregat (Hellgelb)</b><br>Prüft Regeln,<br>erzeugt Events"]:::aggregate
   ev["<b>Event (Orange)</b><br>Fachliches Ereignis<br>(Vergangenheit)"]:::event
   pol["<b>Policy (Lila)</b><br>Wenn X, dann Y"]:::policy
-  cmd2["<b>Command (Blau)</b><br>Nächste Aktion"]:::command
+  cmd2["<b>Command (Blau)</b><br>gleicher Typ wie oben<br><i>automatisch ausgelöst durch Policy</i>"]:::command
   ext["<b>Externes System (Rosa)</b><br>Außerhalb unserer<br>Anwendung"]:::external
   hs>"<b>Hotspot (Rot)</b><br>Offene Frage / Problem"]:::hotspot
 
-  rm --> ak --> cmd --> ag --> ev --> pol --> cmd2
+  rm --> ak --> cmd --> ag --> ev --> pol -- "löst aus" --> cmd2
   pol --> ext
   hs -.- cmd
 
