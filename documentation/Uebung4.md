@@ -85,7 +85,9 @@ class DomainEvent:
 class AbstimmungBeendet(DomainEvent):
     abstimmung_id: AbstimmungId
     titel: str
-    optionen: tuple[tuple[OptionId, str], ...]  # Tupel statt Liste, damit das Event wirklich unveränderlich ist
+    optionen: tuple[
+        tuple[OptionId, str], ...
+    ]  # Tupel statt Liste, damit das Event wirklich unveränderlich ist
 
 
 class Abstimmung:  # Aggregate Root (Auszug)
@@ -94,8 +96,9 @@ class Abstimmung:  # Aggregate Root (Auszug)
             raise ValueError("Nur eine aktive Abstimmung kann beendet werden")
         self._status = Abstimmungsstatus.BEENDET
         self._ereignisse.append(
-            AbstimmungBeendet(jetzt, self._id, self._titel,
-                              tuple((o.id, o.bezeichnung) for o in self._optionen))
+            AbstimmungBeendet(
+                jetzt, self._id, self._titel, tuple((o.id, o.bezeichnung) for o in self._optionen)
+            )
         )
 
     def ereignisse_abholen(self) -> list[DomainEvent]:
