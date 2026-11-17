@@ -255,10 +255,19 @@ Implementieren Sie die Domänenlogik, die Ihre Tests erfüllt. Nutzen Sie das LL
 | 2 | 3 neue Tests für `EinladungscodeWert.neu()` scheitern mit `AttributeError` | Factory mit `secrets.choice` über das Crockford-Alphabet | 128/128 grün, 100 % Coverage |
 | 3 | 26 Tests für den Shared Kernel scheitern beim Import ([test_ids.py](../tests/shared_kernel/test_ids.py), [test_events.py](../tests/shared_kernel/test_events.py)) | [shared_kernel/ids.py](../src/modernesoftwarentwicklungws26/shared_kernel/ids.py): `EntitaetsId` → `PersonId`, `AbstimmungId`, `OptionId`; [shared_kernel/events.py](../src/modernesoftwarentwicklungws26/shared_kernel/events.py): `DomainEvent` | 155/155 grün (gesamt), 100 % Coverage |
 | 4 | 10 Tests für `StimmzettelId` und `Stimme` ([tests/stimmabgabe/test_value_objects.py](../tests/stimmabgabe/test_value_objects.py)); erst rot aus falschem Grund (gleichnamige Testmodule, A12), dann richtig rot (`ModuleNotFoundError`) | [stimmabgabe/domain/model/value_objects.py](../src/modernesoftwarentwicklungws26/stimmabgabe/domain/model/value_objects.py): `StimmzettelId` (lokal, A8), `Stimme` mit `OptionId`-Prüfung | 165/165 grün, 100 % Coverage |
+| 5 | 21 Tests für `WaehlerToken` und `WaehlerTokenService` ([test_waehler_token_service.py](../tests/stimmabgabe/test_waehler_token_service.py)) scheitern beim Import | `WaehlerToken` (64 Hex-Zeichen), [WaehlerTokenService](../src/modernesoftwarentwicklungws26/stimmabgabe/domain/service/waehler_token_service.py): `HMAC-SHA256(geheimnis, person.bytes + abstimmung.bytes)` | 186/186 grün, 100 % Coverage |
 
 Die Factory-Tests prüfen gültiges Format, Eindeutigkeit von 1000 Codes und dass jedes der 32 Zeichen vorkommt. Die Wahrscheinlichkeit für einen Fehlalarm liegt bei etwa 10⁻¹⁶⁴, die Tests sind also nicht flaky. Dass `secrets` statt `random` verwendet wird, prüfen wir bewusst nicht per Test, weil das den Test an die Implementierung koppeln würde. Das gehört ins Code-Review.
 
 Die wichtigsten Shared-Kernel-Tests: `PersonId(u) != AbstimmungId(u)` bei gleicher UUID (typsichere IDs) und `DomainEvent` hat genau das Feld `zeitpunkt`. Der zweite Test schreibt die Ablehnung von V4 aus Aufgabe 1 fest: keine Metadaten mit Personenbezug, also kein Risiko für das Wahlgeheimnis.
+
+**WaehlerToken (offener Punkt S7 aus Aufgabe 1):** Das Geheimnis kommt per Konstruktor in den `WaehlerTokenService` und bleibt im Context `stimmabgabe`. Woher es zur Laufzeit kommt (z. B. eine Umgebungsvariable), entscheidet erst die Infrastrukturschicht. Die wichtigsten Tests:
+- **Deterministisch:** Gleiche Person und gleiche Abstimmung ergeben dasselbe Token, sonst findet niemand seinen Stimmzettel wieder.
+- **Unverknüpfbar:** Eine andere Abstimmung, Person oder ein anderes Geheimnis ergeben ein anderes Token.
+- **Vertauschte Argumente lösen einen `TypeError` aus:** Sonst entstünde still ein gültiges, aber falsches Token.
+- **Festes Testbeispiel (Known Answer):** Das erwartete Token wurde unabhängig mit `hmac` berechnet und schützt das Format. Ändert es sich, wären alle bereits abgegebenen Stimmzettel unauffindbar.
+
+**Restrisiko:** Wer das Geheimnis *und* die Liste aller `PersonId`s besitzt, kann jedes Token einer Person zuordnen, indem er alle Kombinationen durchrechnet. Das Wahlgeheimnis hängt also davon ab, dass das Geheimnis nie dorthin gelangt, wo `identity` läuft.
 
 #### Abweichungen von der Vorgabe
 
@@ -275,6 +284,7 @@ Die wichtigsten Shared-Kernel-Tests: `PersonId(u) != AbstimmungId(u)` bei gleich
 | A11 | Paketstruktur aus Übung 3, Kap. 6: `identity/domain/model/` mit u. a. `PersonId` | Value Objects zuerst flach in `identity/value_objects.py`, nach Zyklus 3 nach `identity/domain/model/value_objects.py` verschoben; `PersonId` liegt im `shared_kernel` | Die Struktur aus Übung 3 gilt jetzt, solange es erst eine Datei gibt. Der `shared_kernel` hat keine Schichten, weil er nur Domänentypen enthält. `PersonId` liegt dort, weil `stimmabgabe` sie braucht (A8). |
 | A12 | pytest-Standardkonfiguration | `--import-mode=importlib` in `pyproject.toml` | `tests/identity/` und `tests/stimmabgabe/` haben beide eine `test_value_objects.py`; im Standardmodus bricht pytest beim Einsammeln ab. `importlib` ist der von pytest empfohlene Modus für neue Projekte. |
 | A13 | A4: keine `isinstance`-Prüfungen | `EntitaetsId` und `Stimme` prüfen den Typ explizit (`TypeError`) | Bei Strings scheitert `re` von selbst. Bei IDs würde nichts scheitern: `Stimme(AbstimmungId(...))` ginge still durch, weil Python Typhinweise nicht zur Laufzeit prüft. |
+| A14 | Geheimnis „per Konstruktor“ (Aufgabe 1, S7), keine weiteren Vorgaben | Geheimnis muss `bytes` sein (`TypeError`) und mindestens 32 Bytes haben (`ValueError`) | Eigene Sicherheitsentscheidung: 32 Bytes entsprechen der Ausgabelänge von SHA-256 und der üblichen Empfehlung für HMAC-Schlüssel. Ein kurzes Geheimnis ließe sich durchprobieren. |
 | A9 | ID-Klassen einzeln mit `neu()` als `@staticmethod` (Übung 3, Kap. 6) | gemeinsame Basisklasse `EntitaetsId` mit `@classmethod neu() -> Self` | Alle IDs sind exakt gleich aufgebaut, hier lohnt die Vererbung (anders als bei V-B). Neu dazu: `TypeError`, wenn `wert` keine UUID ist (wie A4). |
 | A10 | Übung 3, Kap. 6: `Adresse` prüft die PLZ mit `\d{5}` | `[0-9]{5}` | `\d` akzeptiert Unicode-Ziffern (Befund aus Aufgabe 2); der Code-Auszug in Übung 3 ist damit überholt |
 

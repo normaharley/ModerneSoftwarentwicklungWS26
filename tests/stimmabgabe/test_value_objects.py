@@ -9,6 +9,7 @@ from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, Option
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import (
     Stimme,
     StimmzettelId,
+    WaehlerToken,
 )
 
 # --------------------------------------------------------------------------- #
@@ -70,3 +71,44 @@ def test_stimme_ist_unveraenderlich() -> None:
     stimme = Stimme(OptionId.neu())
     with pytest.raises(dataclasses.FrozenInstanceError):
         stimme.ausgewaehlte_option = OptionId.neu()  # type: ignore[misc]
+
+
+# --------------------------------------------------------------------------- #
+# WaehlerToken
+# --------------------------------------------------------------------------- #
+
+GUELTIGES_TOKEN = "2feddfaafaaa395755115b3f64aba02a64aa408b30d56aa88a76b51755cae95a"
+
+
+@pytest.mark.parametrize(
+    "eingabe",
+    [
+        pytest.param(GUELTIGES_TOKEN, id="hmac-sha256-hex"),
+        pytest.param("0" * 64, id="nur-nullen"),
+        pytest.param("f" * 64, id="nur-f"),
+    ],
+)
+def test_waehler_token_gueltig(eingabe: str) -> None:
+    assert WaehlerToken(eingabe).wert == eingabe
+
+
+@pytest.mark.parametrize(
+    "eingabe",
+    [
+        pytest.param("", id="leer"),
+        pytest.param(GUELTIGES_TOKEN[:-1], id="63-zeichen"),
+        pytest.param(GUELTIGES_TOKEN + "0", id="65-zeichen"),
+        pytest.param(GUELTIGES_TOKEN.upper(), id="grossbuchstaben"),
+        pytest.param("g" + GUELTIGES_TOKEN[1:], id="kein-hex"),
+        pytest.param(GUELTIGES_TOKEN + "\n", id="newline-am-ende"),
+    ],
+)
+def test_waehler_token_ungueltig_wirft_value_error(eingabe: str) -> None:
+    with pytest.raises(ValueError):
+        WaehlerToken(eingabe)
+
+
+def test_waehler_token_ist_unveraenderlich() -> None:
+    token = WaehlerToken(GUELTIGES_TOKEN)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        token.wert = "0" * 64  # type: ignore[misc]
