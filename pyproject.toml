@@ -24,7 +24,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=modernesoftwarentwicklungws26 --cov-report=term-missing --cov-report=xml"
+addopts = "--import-mode=importlib --cov=modernesoftwarentwicklungws26 --cov-report=term-missing --cov-report=xml"
 
 [tool.ruff]
 line-length = 100
