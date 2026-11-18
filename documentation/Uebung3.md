@@ -67,7 +67,8 @@ flowchart LR
 ```mermaid
 flowchart LR
   ad3["Admin"]:::actor --> c_create["Abstimmung erstellen"]:::command --> ag_ab1["Abstimmung"]:::aggregate --> e_created["Abstimmung erstellt"]:::event
-  e_created --> p_start["Wenn Startzeit erreicht,<br>dann starten"]:::policy --> c_start["Abstimmung starten"]:::command --> ag_ab2["Abstimmung"]:::aggregate --> e_started["Abstimmung gestartet"]:::event
+  sys2["System (Zeit)"]:::actor --> p_start["Wenn Startzeit erreicht,<br>dann starten"]:::policy --> c_start["Abstimmung starten"]:::command --> ag_ab2["Abstimmung"]:::aggregate --> e_started["Abstimmung gestartet"]:::event
+  e_created -. "Start- und Endzeit festgelegt" .-> p_start
   e_created --> rm_list[("Übersicht, Suche, Kategorien")]:::readmodel
   e_created --> rm_det[("Details")]:::readmodel
 
@@ -78,6 +79,8 @@ flowchart LR
   classDef policy fill:#d8b4fe,stroke:#7e22ce,color:#000
   classDef readmodel fill:#bbf7d0,stroke:#15803d,color:#000
 ```
+
+Start und Ende einer Abstimmung laufen automatisch: Der Admin legt beim Erstellen Start- und Endzeit fest. Das System (Zeit) startet die Abstimmung zur Startzeit (Phase 2) und beendet sie zur Endzeit (Phase 4). Der Admin startet oder beendet eine Abstimmung nicht manuell.
 
 ### Phase 3: Abstimmen
 
@@ -123,20 +126,22 @@ flowchart LR
 
 |                            | 1 Onboarding                                                                                                     | 2 Vorbereiten                             | 3 Abstimmen                                              | 4 Abschließen                                                     |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Akteur** (Gelb)          | Admin, Bürger:in                                                                                                 | Admin                                     | Bürger:in                                                | System (Zeit), Admin                                              |
+| **Akteur** (Gelb)          | Admin, Bürger:in                                                                                                 | Admin, System (Zeit)                      | Bürger:in                                                | System (Zeit), Admin                                              |
 | **Command** (Blau)         | Admin anlegen, Codes generieren, Registrieren, Code einlösen, Person verifizieren                                | Abstimmung erstellen, Abstimmung starten  | Stimme abgeben, Stimme ändern                            | Abstimmung beenden, Ergebnis auswerten, Ergebnis veröffentlichen  |
 | **Aggregat** (Hellgelb)    | Einladungscode, Wählerkonto                                                                                      | Abstimmung                                | Stimmzettel                                              | Abstimmung                                                        |
 | **Event** (Orange)         | Admin angelegt, Codes generiert, Code per Post versendet, Profil registriert, Code eingelöst, Person verifiziert | Abstimmung erstellt, Abstimmung gestartet | Stimme abgegeben, Stimme geändert                        | Abstimmung beendet, Ergebnis ausgewertet, Ergebnis veröffentlicht |
 | **Policy** (Lila)          | Wenn Codes generiert, dann per Post versenden; Wenn Code gültig und Daten passen, dann verifizieren              | Wenn Startzeit erreicht, dann starten     |                                                          | Wenn Endzeit erreicht, dann beenden; Wenn beendet, dann auswerten |
 | **Externes System** (Rosa) | Post / Druckdienstleister                                                                                        |                                           |                                                          |                                                                   |
 | **Read Model** (Grün)      | Tabelle Person zu Code                                                                                           |                                           | Übersicht/Suche/Kategorien, Details, Abstimmungshistorie | Ergebnisansicht                                                   |
-| **Hotspot** (Rot)          | Wer darf Admins anlegen? Code einmalig? Ablaufdatum?                                                             |                                           | Stimme ändern vs. Anonymität                             | Zwischenergebnisse sichtbar?                                      |     | Zwischenergebnisse sichtbar?                                      |
+| **Hotspot** (Rot)          | Wer darf Admins anlegen? Code einmalig? Ablaufdatum?                                                             |                                           | Stimme ändern vs. Anonymität                             | Zwischenergebnisse sichtbar?                                      |
 
 ### Geschäftsregeln (Invarianten der Aggregate)
 
 - **Stimmzettel:** Nur verifizierte Personen dürfen abstimmen, maximal eine Stimme pro Abstimmung.
 - **Stimmzettel:** Eine Stimme darf nur geändert werden, solange die Abstimmung offen ist.
-- **Einladungscode:** Ein Code kann nur einmal eingelöst werden (offen: Ablaufdatum, siehe Hotspot).
+- **Einladungscode:** Ein Code ist über die `MeldeId` an genau einen Meldeeintrag gebunden und kann nur einmal eingelöst werden (offen: Ablaufdatum, siehe Hotspot).
+- **Meldeeintrag:** Zu einem Meldeeintrag (`MeldeId`) gibt es höchstens ein verifiziertes Konto.
+- **Abstimmung:** Start und Ende erfolgen automatisch zur festgelegten Start- bzw. Endzeit, nicht manuell durch den Admin.
 
 
 
@@ -212,6 +217,11 @@ classDiagram
         wert
     }
 
+    class MeldeId {
+        <<Value Object>>
+        wert
+    }
+
     class Abstimmungszeitraum {
         <<Value Object>>
         beginn
@@ -226,6 +236,8 @@ classDiagram
     Person *-- EmailAdresse
     Person *-- Adresse
     Einladungscode *-- EinladungscodeWert
+    Einladungscode *-- MeldeId
+    Person *-- MeldeId
     Einladungscode *-- Adresse
     Abstimmung *-- Abstimmungszeitraum
     Stimmzettel *-- Stimme
@@ -243,7 +255,7 @@ classDiagram
 
 _Abb. 2: Domänenmodell als Klassendiagramm (fachliche Gesamtsicht, noch ohne Bounded Contexts)_
 
-Die Beziehungen sind hier noch fachlich als Assoziationen gezeichnet: Eine Person erhält einen oder mehrere Einladungscodes; jeder Code wird von höchstens einer Person eingelöst. Ein Admin erstellt beliebig viele Abstimmungen, jede Abstimmung enthält mindestens zwei Abstimmungsoptionen. Für jede Kombination aus Person und Abstimmung gibt es höchstens eine Abstimmungsberechtigung. Eine Abstimmung umfasst beliebig viele Stimmzettel; jeder Stimmzettel enthält genau eine Stimme, die sich auf genau eine Abstimmungsoption bezieht. Aus den Stimmzetteln einer Abstimmung ergibt sich höchstens ein Ergebnis.
+Die Beziehungen sind hier noch fachlich als Assoziationen gezeichnet: Eine Person erhält einen oder mehrere Einladungscodes; jeder Code wird von höchstens einer Person eingelöst. Jeder Einladungscode ist über eine eindeutige `MeldeId` an genau einen Meldeeintrag gebunden und wird an dessen Adresse verschickt. Wohnen mehrere Personen unter derselben Adresse, erhält jede einen eigenen Code mit eigener `MeldeId`. Ein Admin erstellt beliebig viele Abstimmungen, jede Abstimmung enthält mindestens zwei Abstimmungsoptionen. Für jede Kombination aus Person und Abstimmung gibt es höchstens eine Abstimmungsberechtigung. Eine Abstimmung umfasst beliebig viele Stimmzettel; jeder Stimmzettel enthält genau eine Stimme, die sich auf genau eine Abstimmungsoption bezieht. Aus den Stimmzetteln einer Abstimmung ergibt sich höchstens ein Ergebnis.
 
 Bewusst gibt es **keine** Assoziation zwischen Person und Stimmzettel, damit die Stimmabgabe anonym bleibt. Welche Begriffe zusammengehören (grobe Aggregate-Kandidaten), lässt sich bereits andeuten; verbindlich festgelegt wird es erst in Schritt 4. Wie die Beziehungen später im Code ausgedrückt werden (Objektreferenz, ID oder Token), entscheidet sich ebenfalls dort.
 
@@ -255,7 +267,7 @@ Aus den Events des Event Stormings ergeben sich diese Kernkonzepte:
 |---|---|---|
 |Person|Entität|Registrierte Bürgerin bzw. registrierter Bürger, die bzw. der nach Verifizierung abstimmen darf|
 |Admin|Entität|Benutzer mit administrativen Rechten, legt Abstimmungen an|
-|Einladungscode|Entität|Code zur Verifizierung einer Person, wird an eine Adresse verschickt|
+|Einladungscode|Entität|Code zur Verifizierung einer bestimmten Person, über die `MeldeId` an ihren Meldeeintrag gebunden und an ihre Meldeadresse verschickt|
 |Abstimmung|Entität|Eine angelegte und durchgeführte Abstimmung|
 |Abstimmungsoption|Entität|Eine mögliche Antwort bzw. Wahlmöglichkeit|
 |Abstimmungsberechtigung|Entität|Dokumentiert, ob eine Person an einer Abstimmung teilnehmen darf bzw. bereits teilgenommen hat|
@@ -264,7 +276,8 @@ Aus den Events des Event Stormings ergeben sich diese Kernkonzepte:
 
 ### Wertobjekte
 - **EmailAdresse**: E-Mail-Adresse einer Person.
-- **Adresse**: Postanschrift einer Person bzw. Zieladresse eines Einladungscodes.
+- **Adresse**: Postanschrift einer Person. Beim Einladungscode ist sie nur die Versandadresse; zugeordnet wird der Code über die `MeldeId`, nicht über die Adresse.
+- **MeldeId**: Eindeutige Kennung eines Meldeeintrags (z. B. Nummer im Wählerverzeichnis). Wird beim Generieren der Codes vergeben.
 - **EinladungscodeWert**: Der eigentliche Code.
 - **Abstimmungszeitraum**: Beginn und Ende einer Abstimmung.
 - **Stimme**: Die konkrete Auswahl innerhalb einer Abstimmung.
@@ -279,6 +292,10 @@ Der Status einer Abstimmung (z. B. Entwurf, aktiv, beendet) wird als einfaches A
     
 3. **Ergebnis** Das Ergebnis wird vollständig aus den Stimmzetteln abgeleitet. In einem späteren Schritt bietet es sich an, es als Read Model umzusetzen.
 
+4. **Ein Code pro Person, nicht pro Haushalt** Wäre der Einladungscode nur an die Adresse gebunden, könnte jede Person im Haushalt jeden Code dieser Adresse einlösen. Ein Abgleich über Name und Adresse wäre fehleranfällig (gleiche Namen im Haushalt, Schreibweisen, Namensänderungen). Deshalb wird beim Generieren für jeden Meldeeintrag eine eindeutige `MeldeId` vergeben und der Code daran gebunden (entspricht dem Read Model „Tabelle Person zu Code“ aus dem Event Storming). Bei der Verifizierung übernimmt die Person die `MeldeId` des Codes; zu jeder `MeldeId` gibt es höchstens ein verifiziertes Konto. Das funktioniert auch, wenn ein verlorener Code neu ausgestellt wird.
+    
+    **Bewusste Einschränkung:** Wer den Brief einer anderen Person an sich nimmt, kann deren Code einlösen. Dieses Restrisiko besteht bei der Briefwahl genauso.
+
 
 
 
@@ -290,8 +307,8 @@ Der Status einer Abstimmung (z. B. Entwurf, aktiv, beendet) wird als einfaches A
 
 |#|Bounded Context|Verantwortung|Klassen aus dem Domänenmodell|Domain Events|Subdomain-Typ|
 |---|---|---|---|---|---|
-|1|**Identity & Zugang**|Einladungscodes, Registrierung, Verifikation, Login/Logout, Rollen|Person, Einladungscode, Rolle, EmailAdresse, Adresse, EinladungscodeWert|EinladungscodeGeneriert, PersonRegistriert, PersonVerifiziert, AdminAngelegt, PersonAngemeldet|Generic: Standardproblem, das sich mit bewährten Bibliotheken lösen lässt|
-|2|**Abstimmungsverwaltung**|Admin erstellt, startet und beendet Abstimmungen; Bürger sehen Übersicht und Details|Abstimmung, Abstimmungsoption, Abstimmungsstatus|AbstimmungErstellt, AbstimmungGestartet, AbstimmungBeendet|Supporting: nötig, aber fachlich einfach|
+|1|**Identity & Zugang**|Einladungscodes, Registrierung, Verifikation, Login/Logout, Rollen|Person, Einladungscode, Rolle, EmailAdresse, Adresse, EinladungscodeWert, MeldeId|EinladungscodeGeneriert, PersonRegistriert, PersonVerifiziert, AdminAngelegt, PersonAngemeldet|Generic: Standardproblem, das sich mit bewährten Bibliotheken lösen lässt|
+|2|**Abstimmungsverwaltung**|Admin erstellt Abstimmungen mit Start- und Endzeit; das System startet und beendet sie automatisch; Bürger sehen Übersicht und Details|Abstimmung, Abstimmungsoption, Abstimmungsstatus|AbstimmungErstellt, AbstimmungGestartet, AbstimmungBeendet|Supporting: nötig, aber fachlich einfach|
 |3|**Stimmabgabe**|Stimme abgeben und ändern, höchstens eine Stimme pro Bürger, Anonymität|Stimmzettel, Stimme, WaehlerToken, StimmabgabeService|StimmeAbgegeben, StimmeGeaendert|**Core**: Hier liegen Sicherheit, Einmaligkeit und Wahlgeheimnis, also der eigentliche Wert der Anwendung|
 |4|**Auswertung**|Stimmen nach Fristende auszählen, Ergebnis und Beteiligung anzeigen|Ergebnis|ErgebnisErmittelt, ErgebnisVeroeffentlicht|Supporting|
 
@@ -349,8 +366,8 @@ Daraus ergibt sich:
 
 |Bounded Context|Verantwortlichkeit|Zugehörige Klassen|Ausgelöste Events|Empfangene Events|
 |---|---|---|---|---|
-|**Benutzerverwaltung** (Onboarding)|Registrierung, Verifizierung und Verwaltung von Benutzern inkl. Rollen (Bürger/Admin)|`Person`, `Einladungscode`, `Rolle`, `EmailAdresse`, `Adresse`, `EinladungscodeWert`|Code versendet, Profil registriert, Code eingelöst, Person verifiziert, Admin angelegt|–|
-|**Abstimmungsverwaltung** (Vorbereitung)|Abstimmungen erstellen, konfigurieren, starten und beenden|`Abstimmung`, `Abstimmungsoption`, `Abstimmungsstatus`|Abstimmung erstellt, Abstimmung gestartet, Abstimmung beendet|Admin angelegt (nur Admins dürfen verwalten)|
+|**Benutzerverwaltung** (Onboarding)|Registrierung, Verifizierung und Verwaltung von Benutzern inkl. Rollen (Bürger/Admin)|`Person`, `Einladungscode`, `Rolle`, `EmailAdresse`, `Adresse`, `EinladungscodeWert`, `MeldeId`|Code versendet, Profil registriert, Code eingelöst, Person verifiziert, Admin angelegt|–|
+|**Abstimmungsverwaltung** (Vorbereitung)|Abstimmungen erstellen und konfigurieren (Admin); zur Start- bzw. Endzeit automatisch starten und beenden (System)|`Abstimmung`, `Abstimmungsoption`, `Abstimmungsstatus`|Abstimmung erstellt, Abstimmung gestartet, Abstimmung beendet|Admin angelegt (nur Admins dürfen verwalten)|
 |**Abstimmungsdurchführung** (Abstimmen)|Stimmabgabe, Prüfung der Teilnahmeberechtigung und Änderung von Stimmen|`Stimmzettel`, `Stimme`, `WaehlerToken`, `StimmabgabeService`|Stimme abgegeben, Stimme geändert|Person verifiziert, Abstimmung gestartet, Abstimmung beendet|
 |**Ergebnisverwaltung** (Abschließen)|Stimmen auswerten und Ergebnisse veröffentlichen|`Ergebnis`|Ergebnis ausgewertet, Ergebnis veröffentlicht|Abstimmung beendet|
 
@@ -421,11 +438,13 @@ classDiagram
             adresse: Adresse
             rolle: Rolle
             verifiziert: bool
+            meldeId: MeldeId
         }
         class Einladungscode {
             <<Aggregate Root>>
             einladungscodeId: EinladungscodeId
             code: EinladungscodeWert
+            meldeId: MeldeId
             adresse: Adresse
             ablaufdatum: datetime
             eingeloest: bool
@@ -485,13 +504,15 @@ classDiagram
 
 |Aggregate|Attribute|Methoden|Invarianten|
 |---|---|---|---|
-|**Person**<br>Aggregate Root<br>Context: Benutzerverwaltung|**personId**: PersonId<br>name: str<br>email: EmailAdresse<br>passwortHash: PasswortHash<br>adresse: Adresse<br>rolle: Rolle (BUERGER, ADMIN)<br>verifiziert: bool|`registrieren(name, email, passwort, adresse)` _[Factory]_<br>`alsAdminAnlegen(name, email, passwort)` _[Factory]_<br>`verifizieren()`<br>`passwortPruefen(klartext)`<br>`darfAbstimmen()`|Name und E-Mail sind nicht leer<br>Ein Admin kann nie abstimmen: `darfAbstimmen()` liefert für ADMIN immer `False`<br>Eine nicht verifizierte Person kann nicht abstimmen<br>Das Passwort wird nie im Klartext gehalten|
-|**Einladungscode**<br>Aggregate Root<br>Context: Benutzerverwaltung|**einladungscodeId**: EinladungscodeId<br>code: EinladungscodeWert<br>adresse: Adresse<br>ablaufdatum: datetime<br>eingeloest: bool<br>_eingeloestVon_: PersonId \| None|`generieren(adresse, ablaufdatum)` _[Factory]_<br>`einloesen(personId, jetzt)`<br>`istAbgelaufen(jetzt)`|Ein Code wird nur einmal eingelöst<br>Ein abgelaufener Code kann nicht eingelöst werden<br>`eingeloestVon` ist genau dann gesetzt, wenn `eingeloest` gilt|
-|**Abstimmung**<br>Aggregate Root<br>Context: Abstimmungsverwaltung|**abstimmungId**: AbstimmungId<br>titel: str<br>beschreibung: str<br>startzeit: datetime<br>endzeit: datetime<br>status: Abstimmungsstatus<br>optionen: list[Abstimmungsoption]|`erstellen(titel, beschreibung, optionen, startzeit, endzeit)` _[Factory]_<br>`bearbeiten(titel, beschreibung, optionen)`<br>`starten()`<br>`beenden()`<br>`istOffen(jetzt)`|`endzeit` liegt nach `startzeit`<br>Mindestens 2 Optionen, keine Bezeichnung doppelt<br>Statuswechsel nur ENTWURF → AKTIV → BEENDET, nie zurück<br>Ab AKTIV sind Titel, Beschreibung und Optionen unveränderlich|
+|**Person**<br>Aggregate Root<br>Context: Benutzerverwaltung|**personId**: PersonId<br>name: str<br>email: EmailAdresse<br>passwortHash: PasswortHash<br>adresse: Adresse<br>rolle: Rolle (BUERGER, ADMIN)<br>verifiziert: bool<br>meldeId: MeldeId \| None|`registrieren(name, email, passwort, adresse)` _[Factory]_<br>`alsAdminAnlegen(name, email, passwort)` _[Factory]_<br>`verifizieren(meldeId)`<br>`passwortPruefen(klartext)`<br>`darfAbstimmen()`|Name und E-Mail sind nicht leer<br>Ein Admin kann nie abstimmen: `darfAbstimmen()` liefert für ADMIN immer `False`<br>Eine nicht verifizierte Person kann nicht abstimmen<br>Ein verifizierter Bürger hat genau eine `MeldeId`, sie ändert sich danach nicht mehr<br>Das Passwort wird nie im Klartext gehalten|
+|**Einladungscode**<br>Aggregate Root<br>Context: Benutzerverwaltung|**einladungscodeId**: EinladungscodeId<br>code: EinladungscodeWert<br>meldeId: MeldeId<br>adresse: Adresse<br>ablaufdatum: datetime<br>eingeloest: bool<br>_eingeloestVon_: PersonId \| None|`generieren(meldeId, adresse, ablaufdatum)` _[Factory]_<br>`einloesen(personId, jetzt)`<br>`istAbgelaufen(jetzt)`|Jeder Code gehört zu genau einer `MeldeId`<br>Ein Code wird nur einmal eingelöst<br>Ein abgelaufener Code kann nicht eingelöst werden<br>`eingeloestVon` ist genau dann gesetzt, wenn `eingeloest` gilt|
+|**Abstimmung**<br>Aggregate Root<br>Context: Abstimmungsverwaltung|**abstimmungId**: AbstimmungId<br>titel: str<br>beschreibung: str<br>startzeit: datetime<br>endzeit: datetime<br>status: Abstimmungsstatus<br>optionen: list[Abstimmungsoption]|`erstellen(titel, beschreibung, optionen, startzeit, endzeit)` _[Factory]_<br>`bearbeiten(titel, beschreibung, optionen)`<br>`starten(jetzt)`<br>`beenden(jetzt)`<br>`istOffen(jetzt)`|`endzeit` liegt nach `startzeit`<br>Mindestens 2 Optionen, keine Bezeichnung doppelt<br>Statuswechsel nur ENTWURF → AKTIV → BEENDET, nie zurück<br>`starten(jetzt)` nur, wenn `jetzt` ≥ `startzeit`; `beenden(jetzt)` nur, wenn `jetzt` ≥ `endzeit`<br>`istOffen(jetzt)` gilt nur bei Status AKTIV und `startzeit` ≤ `jetzt` < `endzeit`<br>Ab AKTIV sind Titel, Beschreibung und Optionen unveränderlich|
 |**Abstimmungsoption**<br>Entity im Aggregate Abstimmung<br>Context: Abstimmungsverwaltung|**optionId**: OptionId<br>bezeichnung: str|– (wird nur über `Abstimmung` angelegt und geändert)|Bezeichnung ist nicht leer|
 |**Stimmzettel**<br>Aggregate Root<br>Context: Abstimmungsdurchführung|**stimmzettelId**: StimmzettelId<br>_abstimmungId_: AbstimmungId<br>waehlerToken: WaehlerToken<br>stimme: Stimme<br>abgegebenAm: datetime<br>geaendertAm: datetime \| None|`abgeben(abstimmungId, waehlerToken, stimme)` _[Factory]_<br>`aendern(stimme, jetzt)`|Die Stimme zeigt auf genau eine OptionId<br>`geaendertAm` liegt nicht vor `abgegebenAm`<br>Der Stimmzettel enthält keine PersonId, nur das Token|
 
 **Warum `Abstimmungsoption` eine Entity und kein Value Object ist:** Stimmzettel verweisen dauerhaft über die `OptionId` auf die Option. Die Option braucht deshalb eine stabile Identität. Der Zugriff erfolgt nur über `Abstimmung`, ein eigenes Repository gibt es nicht.
+
+**Warum der `Einladungscode` eine `MeldeId` hat:** Die Adresse allein bestimmt nur den Haushalt, und ein Abgleich über den Namen ist fehleranfällig. Die `MeldeId` ordnet jeden Code eindeutig einem Meldeeintrag zu. Der Name der Person wird nur für das Anschreiben an den Druckdienstleister übergeben und im Code nicht gespeichert.
 
 **`alsAdminAnlegen()`** ist im Klassendiagramm aus Aufgabe 2 noch nicht enthalten. Ohne diese Methode gibt es keinen Auslöser für das Event „Admin angelegt“. Die Methode ist im Diagramm zu ergänzen.
 
@@ -504,6 +525,7 @@ classDiagram
 |`PasswortHash`|wert: str|Enthält nur den Hash, nie das Klartextpasswort. Unveränderlich.|
 |`Adresse`|strasse: str, hausnummer: str, plz: str, ort: str|Kein Feld ist leer, die PLZ hat 5 Ziffern. Unveränderlich.|
 |`EinladungscodeWert`|wert: str|Feste Länge, zufällig erzeugt, nicht leer. Unveränderlich.|
+|`MeldeId`|wert: str|Eindeutige Kennung eines Meldeeintrags, wird beim Generieren der Codes vergeben. Unveränderlich.|
 |`Rolle`|Enum: BUERGER, ADMIN|–|
 |`Abstimmungsstatus`|Enum: ENTWURF, AKTIV, BEENDET|Wechsel nur vorwärts.|
 |`WaehlerToken`|wert: str|Pseudonym, lässt sich ohne Zusatzwissen nicht auf eine Person zurückführen. Unveränderlich.|
@@ -526,14 +548,15 @@ classDiagram
 
 - Regeln, die mehrere Aggregates betreffen, kann eine einzelne Aggregate Root nicht allein sichern. Sie werden in Schritt 5 in Services behandelt:
     - **Eindeutigkeit der E-Mail-Adresse:** betrifft alle `Person`-Aggregates. Prüfung im `RegistrierungsService`, zusätzlich `UNIQUE(email)` in der Datenbank.
-    - **Adressabgleich bei der Verifizierung:** Die Adresse der Person muss zur Adresse des Codes passen. Das braucht `Person` und `Einladungscode`, also prüft es der `RegistrierungsService`.
+    - **Höchstens ein verifiziertes Konto pro Meldeeintrag:** Eine `MeldeId` darf nur bei einer Person eingetragen sein. Das betrifft alle `Person`-Aggregates und den `Einladungscode`, also prüft es der `RegistrierungsService`, zusätzlich `UNIQUE(melde_id)` in der Datenbank.
     - **Höchstens ein Stimmzettel pro Bürger und Abstimmung:** Prüfung im `StimmabgabeService`, zusätzlich `UNIQUE(abstimmung_id, waehler_token)` in der Datenbank. Die Teilnahme bleibt freiwillig, es sind also 0 oder 1 Stimmzettel.
     - **Stimmabgabe nur im offenen Zeitraum:** braucht `Abstimmung.istOffen()` und den `Stimmzettel`, also prüft es der `StimmabgabeService`.
     - **Nur Berechtigte stimmen ab:** braucht `Person.darfAbstimmen()` und den `Stimmzettel`, also prüft es der `StimmabgabeService`.
     - **Die Stimme zeigt auf eine Option der richtigen Abstimmung:** braucht `Abstimmung` und `Stimmzettel`, also prüft es der `StimmabgabeService`.
+- Die `MeldeId` bleibt im Context Benutzerverwaltung. Die Abstimmungsdurchführung sieht sie nie.
 - Der `Stimmzettel` führt bewusst keine `personId`. Das `WaehlerToken` wird beim Abstimmen aus `personId` und `abstimmungId` abgeleitet, sodass derselbe Bürger seinen Stimmzettel wiederfindet, ohne dass der Context Abstimmungsdurchführung den Klarnamen kennt. Wie das Token genau erzeugt wird, entscheiden wir in Schritt 5.
 - Bei der Registrierung werden `Person` und `Einladungscode` geändert, also zwei Aggregates. Damit die Regel „ein Aggregate pro Transaktion“ gilt, wird der Code erst nach dem Event „Profil registriert“ in einer zweiten Transaktion eingelöst.
-- `geburtsdatum` und vergleichbare Stammdaten führt eVote nicht, weil für die Wahlberechtigung nur die verifizierte Meldeadresse zählt.
+- `geburtsdatum` und vergleichbare Stammdaten führt eVote nicht, weil für die Wahlberechtigung nur der verifizierte Meldeeintrag (`MeldeId`) zählt.
 
 
 
@@ -547,17 +570,19 @@ Ein Domain Service enthält Fachlogik, die zu keiner einzelnen Entität „natü
 
 |Service|Art|Aufgabe|Methoden|
 |---|---|---|---|
-|`RegistrierungsService`|Domain Service|Fachregeln über mehrere Aggregates: Eine E-Mail-Adresse darf nur einmal vorkommen (betrifft alle `Person`-Aggregates). Die Adresse der Person muss zur Adresse des Einladungscodes passen (`Person` + `Einladungscode`).|`registriere(name, email, passwort, adresse): PersonId`<br>`verifiziere(personId, codeWert, jetzt)`|
+|`RegistrierungsService`|Domain Service|Fachregeln über mehrere Aggregates: Eine E-Mail-Adresse darf nur einmal vorkommen (betrifft alle `Person`-Aggregates). Zu einer `MeldeId` gibt es höchstens ein verifiziertes Konto; bei der Verifizierung übernimmt die Person die `MeldeId` des Codes (`Person` + `Einladungscode`).|`registriere(name, email, passwort, adresse): PersonId`<br>`verifiziere(personId, codeWert, jetzt)`|
 |`PersonService`|Anwendungsservice|Steuert den Ablauf für Admins und Anmeldung: Aggregate erzeugen oder laden, Methode aufrufen, über das Repository speichern. Enthält keine Fachregeln.|`legeAdminAn(name, email, passwort): PersonId`<br>`meldeAn(email, passwort): PersonId`|
-|`EinladungscodeService`|Anwendungsservice|Erzeugt für eine Liste von Meldeadressen Einladungscodes und veröffentlicht das Event `CodesGeneriert` für den Versand durch den Druckdienstleister.|`generiereCodes(adressen, ablaufdatum): list[EinladungscodeId]`|
-|`AbstimmungService`|Anwendungsservice|Erstellt, startet und beendet Abstimmungen. Ein Domain Service ist nicht nötig, weil nur ein Aggregate betroffen ist. Beim Beenden veröffentlicht er das Event `AbstimmungBeendet`.|`erstelleAbstimmung(titel, beschreibung, optionen, zeitraum): AbstimmungId`<br>`starteAbstimmung(abstimmungId)`<br>`beendeAbstimmung(abstimmungId)`|
+|`EinladungscodeService`|Anwendungsservice|Erzeugt für eine Liste von Meldeeinträgen (`MeldeId`, Name und Adresse je gemeldeter Person) jeweils einen Einladungscode und veröffentlicht das Event `CodesGeneriert` für den Versand durch den Druckdienstleister. Wohnen mehrere Personen unter einer Adresse, entstehen mehrere Codes.|`generiereCodes(meldeeintraege, ablaufdatum): list[EinladungscodeId]`|
+|`AbstimmungService`|Anwendungsservice|Der Admin erstellt Abstimmungen mit Start- und Endzeit. Start und Ende löst eine Zeitsteuerung (Scheduler) aus, die regelmäßig `pruefeZeitplan(jetzt)` aufruft: Alle Abstimmungen im ENTWURF mit erreichter Startzeit werden gestartet, alle aktiven mit erreichter Endzeit beendet, jede in einer eigenen Transaktion. Ein Domain Service ist nicht nötig, weil jeweils nur ein Aggregate betroffen ist. Beim Beenden veröffentlicht er das Event `AbstimmungBeendet`.|`erstelleAbstimmung(titel, beschreibung, optionen, zeitraum): AbstimmungId`<br>`pruefeZeitplan(jetzt)`<br>`starteAbstimmung(abstimmungId, jetzt)` _(intern)_<br>`beendeAbstimmung(abstimmungId, jetzt)` _(intern)_|
 |`WaehlerTokenService`|Domain Service|Leitet aus `personId` und `abstimmungId` das pseudonyme `WaehlerToken` ab. Dadurch findet derselbe Bürger seinen Stimmzettel wieder, ohne dass der Stimmzettel eine `personId` trägt.|`erzeugeToken(personId, abstimmungId): WaehlerToken`|
 |`StimmabgabeService`|Domain Service|Fachregeln über mehrere Aggregates: Nur Berechtigte dürfen abstimmen, nur solange die Abstimmung offen ist, und höchstens einmal pro Abstimmung. Die gewählte Option muss zur Abstimmung gehören.|`stimmeAbgeben(personId, abstimmungId, optionId): StimmzettelId`<br>`stimmeAendern(personId, abstimmungId, optionId)`<br>`hatTeilgenommen(personId, abstimmungId): bool`<br>`zaehleStimmen(abstimmungId): dict[OptionId, int]`|
 |`AuswertungsService`|Anwendungsservice|Reagiert auf das Event `AbstimmungBeendet` (Policy, Parameter `event`), holt die Stimmen über den Open Host Service der Stimmabgabe und erzeugt das Ergebnis (höchstens eines pro Abstimmung).|`werteAus(event): AbstimmungId`<br>`veroeffentliche(abstimmungId)`|
 
 Die Events werden im Code als eigene Klassen modelliert, mit Bezeichnern ohne Umlaute. `AbstimmungBeendet` enthält mindestens `abstimmungId`, `titel` und die Liste der Optionen mit `optionId` und `bezeichnung`, damit die Ergebnisverwaltung ohne Rückgriff auf andere Contexts auskommt.
 
-Anwendungsfälle, die nur ein Aggregate betreffen (zum Beispiel „Abstimmung starten“), brauchen keinen Domain Service: Das Aggregate wird über das Repository geladen, die Methode `starten()` aufgerufen und das Aggregate wieder gespeichert.
+Anwendungsfälle, die nur ein Aggregate betreffen (zum Beispiel „Abstimmung starten“), brauchen keinen Domain Service: Das Aggregate wird über das Repository geladen, die Methode `starten(jetzt)` aufgerufen und das Aggregate wieder gespeichert.
+
+Läuft die Zeitsteuerung verspätet, ist die Stimmabgabe trotzdem geschützt: `istOffen(jetzt)` prüft neben dem Status auch den Zeitraum. Nach der Endzeit wird also keine Stimme mehr angenommen, auch wenn der Status noch AKTIV ist.
 
 #### Schnittstellen zwischen den Contexts
 
@@ -577,13 +602,13 @@ Ein Repository verhält sich aus Sicht der Domäne wie eine Sammlung von Aggrega
 
 |Repository|Aggregate|Methoden|
 |---|---|---|
-|`PersonRepository`|`Person`|`speichern(person)`<br>`findeNachId(personId): Person \| None`<br>`findeNachEmail(email): Person \| None`|
+|`PersonRepository`|`Person`|`speichern(person)`<br>`findeNachId(personId): Person \| None`<br>`findeNachEmail(email): Person \| None`<br>`findeNachMeldeId(meldeId): Person \| None`|
 |`EinladungscodeRepository`|`Einladungscode`|`speichern(code)`<br>`findeNachId(einladungscodeId): Einladungscode \| None`<br>`findeNachWert(codeWert): Einladungscode \| None`|
-|`AbstimmungRepository`|`Abstimmung`|`speichern(abstimmung)`<br>`findeNachId(abstimmungId): Abstimmung \| None`<br>`findeAktive(jetzt): list[Abstimmung]`|
+|`AbstimmungRepository`|`Abstimmung`|`speichern(abstimmung)`<br>`findeNachId(abstimmungId): Abstimmung \| None`<br>`findeAktive(jetzt): list[Abstimmung]`<br>`findeNachStatus(status): list[Abstimmung]`|
 |`StimmzettelRepository`|`Stimmzettel`|`speichern(stimmzettel)`<br>`findeNachId(stimmzettelId): Stimmzettel \| None`<br>`findeNachTeilnahme(abstimmungId, waehlerToken): Stimmzettel \| None`<br>`findeAlleZuAbstimmung(abstimmungId): list[Stimmzettel]`|
 |`ErgebnisRepository`|`Ergebnis`|`speichern(ergebnis)`<br>`findeNachAbstimmung(abstimmungId): Ergebnis \| None`|
 
-`findeNachEmail` und `findeNachTeilnahme` existieren nur, damit die Services die beiden Eindeutigkeitsregeln aus Schritt 4 prüfen können. Beide Regeln werden zusätzlich in der Datenbank abgesichert: `UNIQUE(email)` und `UNIQUE(abstimmung_id, waehler_token)`. Die Prüfung im Service verhindert den Normalfall, der Constraint den Wettlauf zweier gleichzeitiger Anfragen.
+`findeNachEmail`, `findeNachMeldeId` und `findeNachTeilnahme` existieren nur, damit die Services die drei Eindeutigkeitsregeln aus Schritt 4 prüfen können. Alle drei Regeln werden zusätzlich in der Datenbank abgesichert: `UNIQUE(email)`, `UNIQUE(melde_id)` und `UNIQUE(abstimmung_id, waehler_token)`. Die Prüfung im Service verhindert den Normalfall, der Constraint den Wettlauf zweier gleichzeitiger Anfragen.
 
 Die Repository-Interfaces gehören zur Domänenschicht (Port). Ihre Implementierungen, zunächst im Speicher, liegen in der Infrastruktur (Adapter).
 
@@ -617,7 +642,7 @@ evote
 └── identity
     ├── domain
     │   ├── model             PersonId, EmailAdresse, PasswortHash, Adresse, Rolle, Person,
-    │   │                     EinladungscodeId, EinladungscodeWert, Einladungscode
+    │   │                     EinladungscodeId, EinladungscodeWert, MeldeId, Einladungscode
     │   ├── repository        PersonRepository, EinladungscodeRepository (Interfaces, Ports)
     │   └── service           RegistrierungsService (Domain Service)
     ├── application           PersonService, EinladungscodeService
@@ -661,6 +686,15 @@ class PersonId:
         return PersonId(uuid4())
 
 
+@dataclass(frozen=True)
+class MeldeId:
+    wert: str
+
+    def __post_init__(self) -> None:
+        if not self.wert.strip():
+            raise ValueError("MeldeId darf nicht leer sein")
+
+
 class Rolle(Enum):
     BUERGER = auto()
     ADMIN = auto()
@@ -684,6 +718,7 @@ class Person:  # Aggregate Root
         self._adresse = adresse
         self._rolle = rolle
         self._verifiziert = False
+        self._melde_id: MeldeId | None = None
 
     # Factory-Methode: Event "Profil registriert"
     @classmethod
@@ -708,7 +743,12 @@ class Person:  # Aggregate Root
         return admin
 
     # Event "Person verifiziert"
-    def verifizieren(self) -> None:
+    def verifizieren(self, melde_id: MeldeId) -> None:
+        if self._rolle is Rolle.ADMIN:
+            raise ValueError("Ein Admin wird nicht über einen Einladungscode verifiziert")
+        if self._melde_id is not None and self._melde_id != melde_id:
+            raise ValueError("Die Person ist bereits einem anderen Meldeeintrag zugeordnet")
+        self._melde_id = melde_id
         self._verifiziert = True
 
     def passwort_pruefen(self, klartext: str) -> bool:
@@ -727,8 +767,20 @@ class Person:  # Aggregate Root
         return self._id
 
     @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def email(self) -> EmailAdresse:
+        return self._email
+
+    @property
     def adresse(self) -> Adresse | None:
         return self._adresse
+
+    @property
+    def melde_id(self) -> MeldeId | None:
+        return self._melde_id
 ```
 
 ```python
@@ -736,6 +788,7 @@ class PersonRepository(Protocol):  # Port: gehört zur Domänenschicht
     def speichern(self, person: Person) -> None: ...
     def finde_nach_id(self, person_id: PersonId) -> Person | None: ...
     def finde_nach_email(self, email: EmailAdresse) -> Person | None: ...
+    def finde_nach_melde_id(self, melde_id: MeldeId) -> Person | None: ...
 ```
 
 ```python
@@ -751,6 +804,9 @@ class InMemoryPersonRepository:  # Adapter
 
     def finde_nach_email(self, email: EmailAdresse) -> Person | None:
         return next((p for p in self._speicher.values() if p.email == email), None)
+
+    def finde_nach_melde_id(self, melde_id: MeldeId) -> Person | None:
+        return next((p for p in self._speicher.values() if p.melde_id == melde_id), None)
 ```
 
 ```python
@@ -778,11 +834,11 @@ class RegistrierungsService:  # Domain Service: Regeln über mehrere Aggregates
         code = self._codes.finde_nach_wert(code_wert)
         if code is None:
             raise ValueError("Code nicht gefunden")
-        # Fachregel über zwei Aggregates
-        if code.adresse != person.adresse:
-            raise ValueError("Der Code gehört zu einer anderen Adresse")
+        # Fachregel über alle Person-Aggregates: ein Konto pro Meldeeintrag
+        if self._personen.finde_nach_melde_id(code.melde_id) is not None:
+            raise ValueError("Für diesen Meldeeintrag gibt es bereits ein verifiziertes Konto")
         code.einloesen(person_id, jetzt)  # Invarianten liegen im Aggregate
-        person.verifizieren()
+        person.verifizieren(code.melde_id)
         self._codes.speichern(code)
         self._personen.speichern(person)
 ```
@@ -837,13 +893,17 @@ class TestPerson:
 
     def test_verifizierter_buerger_darf_abstimmen(self):
         person = Person.registrieren("Anna Beispiel", self.email, "geheim123", self.adresse)
-        person.verifizieren()
+        person.verifizieren(MeldeId("W-000123"))
         assert person.darf_abstimmen() is True
 
     def test_admin_darf_nie_abstimmen(self):
         admin = Person.als_admin_anlegen("Admin", EmailAdresse("admin@evote.de"), "geheim123")
-        admin.verifizieren()
         assert admin.darf_abstimmen() is False
+
+    def test_admin_kann_nicht_ueber_code_verifiziert_werden(self):
+        admin = Person.als_admin_anlegen("Admin", EmailAdresse("admin@evote.de"), "geheim123")
+        with pytest.raises(ValueError):
+            admin.verifizieren(MeldeId("W-000123"))
 
     def test_lehnt_leeren_namen_ab(self):
         with pytest.raises(ValueError):
@@ -854,7 +914,7 @@ class TestPerson:
             Adresse("Musterstraße", "", "10115", "Berlin")
 ```
 
-Name, Adresse und Rolle werden in der Aggregate Root beziehungsweise im Value Object geprüft und nicht im Service. Der `RegistrierungsService` ruft nur `Person.registrieren(…)` auf und prüft zusätzlich die eine Regel, die ein einzelnes Aggregate nicht sichern kann: die Eindeutigkeit der E-Mail-Adresse.
+Name, Adresse und Rolle werden in der Aggregate Root beziehungsweise im Value Object geprüft und nicht im Service. Der `RegistrierungsService` ruft nur `Person.registrieren(…)` auf und prüft zusätzlich die eine Regel, die ein einzelnes Aggregate nicht sichern kann: die Eindeutigkeit der E-Mail-Adresse (und bei der Verifizierung die Eindeutigkeit der `MeldeId`).
 
 ### Offener Punkt: Erzeugung des WaehlerToken
 
