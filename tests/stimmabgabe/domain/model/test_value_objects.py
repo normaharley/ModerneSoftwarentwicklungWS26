@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, OptionId, PersonId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId, OptionId, PersonId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import (
     Stimme,
     StimmzettelId,

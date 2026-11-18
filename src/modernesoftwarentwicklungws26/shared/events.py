@@ -1,4 +1,9 @@
-"""Basisklasse der Domain-Events."""
+"""Domain-Events, die mehrere Bounded Contexts kennen (Übung 3, Kap. 3: ``shared/events``).
+
+Bisher nur die Basisklasse. Die Integration-Events ``StichtagErreicht`` (``abstimmung`` →
+``identity``) und ``AbstimmungBeendet`` (``abstimmung`` → ``auswertung``) kommen hierher,
+sobald ``abstimmung`` sie erzeugt (Übung 4, A15: keine Events ohne Erzeuger).
+"""
 
 from dataclasses import dataclass
 from datetime import datetime

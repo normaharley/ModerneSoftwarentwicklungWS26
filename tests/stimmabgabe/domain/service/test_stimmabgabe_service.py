@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, OptionId, PersonId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId, OptionId, PersonId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.service.stimmabgabe_service import (
     StimmabgabeService,
 )
@@ -22,13 +22,18 @@ ANNA, BEN = PersonId.neu(), PersonId.neu()
 
 
 class FakeBerechtigung:
-    """Double für den ACL zu ``identity``: alle dürfen, außer den gesperrten."""
+    """Double für die ACL zu ``identity``: alle dürfen, außer den gesperrten Paaren.
+
+    Ein gesperrtes Paar (Person, Abstimmung) steht für „nicht verifiziert“ oder „MeldeId
+    fehlt im Wählerverzeichnis dieser Abstimmung“. Die Stimmabgabe erfährt nie, welches
+    von beiden zutrifft.
+    """
 
     def __init__(self) -> None:
-        self.gesperrt: set[PersonId] = set()
+        self.gesperrt: set[tuple[PersonId, AbstimmungId]] = set()
 
-    def darf_abstimmen(self, person_id: PersonId) -> bool:
-        return person_id not in self.gesperrt
+    def darf_abstimmen(self, person_id: PersonId, abstimmung_id: AbstimmungId) -> bool:
+        return (person_id, abstimmung_id) not in self.gesperrt
 
 
 class FakeAbstimmungen:
@@ -83,10 +88,24 @@ def test_stimme_abgeben(service: StimmabgabeService) -> None:
 def test_nicht_berechtigte_person_wird_abgelehnt(
     service: StimmabgabeService, berechtigung: FakeBerechtigung
 ) -> None:
-    berechtigung.gesperrt.add(ANNA)
+    berechtigung.gesperrt.add((ANNA, ABSTIMMUNG))
     with pytest.raises(ValueError):
         service.stimme_abgeben(ANNA, ABSTIMMUNG, JA, JETZT)
     assert service.hat_teilgenommen(ANNA, ABSTIMMUNG) is False
+
+
+def test_berechtigung_wird_pro_abstimmung_geprueft(
+    service: StimmabgabeService, berechtigung: FakeBerechtigung
+) -> None:
+    # Übung 3: Das Wählerverzeichnis gilt pro Abstimmung. Wer vor dem Stichtag der
+    # neuen Abstimmung weggezogen ist, steht dort nicht mehr drin, bleibt aber verifiziert.
+    nach_umzug = AbstimmungId.neu()
+    berechtigung.gesperrt.add((ANNA, nach_umzug))
+    service.stimme_abgeben(ANNA, ABSTIMMUNG, JA, JETZT)
+    with pytest.raises(ValueError):
+        service.stimme_abgeben(ANNA, nach_umzug, JA, JETZT)
+    assert service.hat_teilgenommen(ANNA, ABSTIMMUNG) is True
+    assert service.hat_teilgenommen(ANNA, nach_umzug) is False
 
 
 def test_geschlossene_abstimmung_wird_abgelehnt(

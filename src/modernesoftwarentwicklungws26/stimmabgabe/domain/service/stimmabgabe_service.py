@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import datetime
 from typing import Protocol
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, OptionId, PersonId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId, OptionId, PersonId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.stimmzettel import Stimmzettel
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import (
     Stimme,
@@ -20,9 +20,12 @@ from modernesoftwarentwicklungws26.stimmabgabe.domain.service.waehler_token_serv
 
 
 class WahlberechtigungPruefer(Protocol):
-    """ACL zu ``identity``."""
+    """ACL zu ``identity``: verifizierter Bürger und MeldeId im Wählerverzeichnis der Abstimmung.
 
-    def darf_abstimmen(self, person_id: PersonId) -> bool: ...
+    Liefert nur ja oder nein, nie Name oder MeldeId (Übung 3, Kap. 5).
+    """
+
+    def darf_abstimmen(self, person_id: PersonId, abstimmung_id: AbstimmungId) -> bool: ...
 
 
 class AbstimmungsInfo(Protocol):
@@ -79,8 +82,8 @@ class StimmabgabeService:
         self, person_id: PersonId, abstimmung_id: AbstimmungId, option_id: OptionId, jetzt: datetime
     ) -> WaehlerToken:
         """Regeln für Abgeben und Ändern. Danach arbeitet der Context nur noch mit dem Token."""
-        if not self._berechtigung.darf_abstimmen(person_id):
-            raise ValueError("Diese Person darf nicht abstimmen")
+        if not self._berechtigung.darf_abstimmen(person_id, abstimmung_id):
+            raise ValueError("Diese Person darf bei dieser Abstimmung nicht abstimmen")
         if not self._abstimmungen.ist_offen(abstimmung_id, jetzt):
             raise ValueError("Die Abstimmung ist nicht offen")
         if option_id not in self._abstimmungen.option_ids(abstimmung_id):

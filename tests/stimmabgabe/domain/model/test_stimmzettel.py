@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, OptionId, PersonId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId, OptionId, PersonId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.stimmzettel import (
     StimmeAbgegeben,
     Stimmzettel,

@@ -1,6 +1,6 @@
 """In-Memory-Adapter für das ``StimmzettelRepository``."""
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.stimmzettel import Stimmzettel
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import (
     StimmzettelId,

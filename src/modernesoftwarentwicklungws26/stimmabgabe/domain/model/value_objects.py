@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import EntitaetsId, OptionId
+from modernesoftwarentwicklungws26.shared.ids import EntitaetsId, OptionId
 
 # HMAC-SHA256 als Hex: 32 Bytes = 64 Zeichen, so wie hexdigest() sie liefert (klein).
 _WAEHLER_TOKEN = re.compile(r"[0-9a-f]{64}")

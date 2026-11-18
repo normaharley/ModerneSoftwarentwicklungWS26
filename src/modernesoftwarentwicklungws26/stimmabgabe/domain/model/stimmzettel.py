@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Self
 
-from modernesoftwarentwicklungws26.shared_kernel.events import DomainEvent
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId
+from modernesoftwarentwicklungws26.shared.events import DomainEvent
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import (
     Stimme,
     StimmzettelId,

@@ -3,7 +3,7 @@
 import hashlib
 import hmac
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, PersonId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId, PersonId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import WaehlerToken
 
 # 32 Bytes = Ausgabelänge von SHA-256, empfohlene Mindestlänge für HMAC-Schlüssel.

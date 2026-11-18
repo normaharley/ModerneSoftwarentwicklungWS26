@@ -8,7 +8,7 @@ from uuid import UUID
 
 import pytest
 
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId, PersonId
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId, PersonId
 from modernesoftwarentwicklungws26.stimmabgabe.domain.model.value_objects import WaehlerToken
 from modernesoftwarentwicklungws26.stimmabgabe.domain.service.waehler_token_service import (
     WaehlerTokenService,

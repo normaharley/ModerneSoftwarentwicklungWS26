@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from modernesoftwarentwicklungws26.shared_kernel.events import DomainEvent
-from modernesoftwarentwicklungws26.shared_kernel.ids import AbstimmungId
+from modernesoftwarentwicklungws26.shared.events import DomainEvent
+from modernesoftwarentwicklungws26.shared.ids import AbstimmungId
 
 JETZT = datetime(2026, 11, 17, 12, 0, tzinfo=UTC)
 

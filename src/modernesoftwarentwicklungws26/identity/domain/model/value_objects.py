@@ -77,3 +77,19 @@ class EinladungscodeWert:
         """
         zeichen = (secrets.choice(_EINLADUNGSCODE_ALPHABET) for _ in range(_EINLADUNGSCODE_LAENGE))
         return cls("".join(zeichen))
+
+
+@dataclass(frozen=True)
+class MeldeId:
+    """Kennung eines Meldeeintrags, unverändert aus dem Melderegister übernommen.
+
+    Bindet Einladungscode und verifiziertes Konto an genau einen Meldeeintrag und bleibt
+    bei einem Umzug innerhalb des Gebiets gleich. Das Format bestimmt das externe
+    Melderegister, deshalb wird nur „nicht leer“ geprüft (Übung 3, Kap. 6).
+    Verlässt nie den Context ``identity``.
+    """
+
+    wert: str
+
+    def __post_init__(self) -> None:
+        _pruefe(_NICHT_LEER, self.wert, "MeldeId")

@@ -8,6 +8,7 @@ from modernesoftwarentwicklungws26.identity.domain.model.value_objects import (
     Adresse,
     EinladungscodeWert,
     EmailAdresse,
+    MeldeId,
 )
 
 # --------------------------------------------------------------------------- #
@@ -246,3 +247,63 @@ def test_einladungscode_neu_nutzt_das_ganze_alphabet() -> None:
     # 12 000 Zeichen über 32 Symbole: P(ein Zeichen fehlt) ≈ 32 · (31/32)^12000 ≈ 1e-164
     gesehen = set("".join(EinladungscodeWert.neu().wert for _ in range(1000)))
     assert gesehen == set(ALPHABET)
+
+
+# --------------------------------------------------------------------------- #
+# MeldeId (Übung 3, überarbeitete Fassung: bindet Einladungscode und Konto an
+# einen Meldeeintrag; das Wählerverzeichnis ist ein set[MeldeId])
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "eingabe",
+    [
+        pytest.param("W-000123", id="beispiel-aus-uebung-3"),
+        pytest.param("7", id="ein-zeichen"),
+        pytest.param("0b6d6a1e-4f4a-4a8e-9d43-1f1b2c3d4e5f", id="anderes-format"),
+    ],
+)
+def test_melde_id_wird_unveraendert_uebernommen(eingabe: str) -> None:
+    # Das Format bestimmt das externe Melderegister; wir prüfen kein eigenes Muster.
+    assert MeldeId(eingabe).wert == eingabe
+
+
+@pytest.mark.parametrize(
+    "leer",
+    [
+        pytest.param("", id="leer"),
+        pytest.param(" ", id="leerzeichen"),
+        pytest.param(" \t\n ", id="gemischter-whitespace"),
+        pytest.param(" ", id="geschuetztes-leerzeichen"),
+    ],
+)
+def test_melde_id_leer_wirft_value_error(leer: str) -> None:
+    with pytest.raises(ValueError):
+        MeldeId(leer)
+
+
+@pytest.mark.parametrize(
+    "wert",
+    [
+        pytest.param(123, id="int"),
+        pytest.param(None, id="none"),
+    ],
+)
+def test_melde_id_falscher_typ_wirft_type_error(wert: object) -> None:
+    # Wie bei den anderen Value Objects: falscher Typ ist ein Programmierfehler (A4)
+    with pytest.raises(TypeError):
+        MeldeId(wert)  # type: ignore[arg-type]
+
+
+def test_melde_id_gleich_und_gleicher_hash_nach_wert() -> None:
+    # Waehlerverzeichnis.enthaelt(melde_id) ist eine Suche in einem set[MeldeId]
+    assert MeldeId("W-000123") == MeldeId("W-000123")
+    assert MeldeId("W-000123") in {MeldeId("W-000123")}
+    assert MeldeId("W-000123") != MeldeId("W-000124")
+
+
+def test_melde_id_ist_unveraenderlich() -> None:
+    # Übung 3, Kap. 4: Die MeldeId eines verifizierten Bürgers ändert sich nicht mehr
+    melde_id = MeldeId("W-000123")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        melde_id.wert = "W-000124"  # type: ignore[misc]
