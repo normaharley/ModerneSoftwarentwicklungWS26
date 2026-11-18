@@ -121,7 +121,7 @@ flowchart LR
 
 ### Kompaktübersicht
 
-| 1 Onboarding               | 2 Vorbereiten                                                                                                    | 3 Abstimmen                               | 4 Abschließen                                            |                                                                   |
+|                            | 1 Onboarding                                                                                                     | 2 Vorbereiten                             | 3 Abstimmen                                              | 4 Abschließen                                                     |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------- |
 | **Akteur** (Gelb)          | Admin, Bürger:in                                                                                                 | Admin                                     | Bürger:in                                                | System (Zeit), Admin                                              |
 | **Command** (Blau)         | Admin anlegen, Codes generieren, Registrieren, Code einlösen, Person verifizieren                                | Abstimmung erstellen, Abstimmung starten  | Stimme abgeben, Stimme ändern                            | Abstimmung beenden, Ergebnis auswerten, Ergebnis veröffentlichen  |
@@ -130,7 +130,7 @@ flowchart LR
 | **Policy** (Lila)          | Wenn Codes generiert, dann per Post versenden; Wenn Code gültig und Daten passen, dann verifizieren              | Wenn Startzeit erreicht, dann starten     |                                                          | Wenn Endzeit erreicht, dann beenden; Wenn beendet, dann auswerten |
 | **Externes System** (Rosa) | Post / Druckdienstleister                                                                                        |                                           |                                                          |                                                                   |
 | **Read Model** (Grün)      | Tabelle Person zu Code                                                                                           |                                           | Übersicht/Suche/Kategorien, Details, Abstimmungshistorie | Ergebnisansicht                                                   |
-| **Hotspot** (Rot)          | Wer darf Admins anlegen? Code einmalig? Ablaufdatum?                                                             |                                           | Stimme ändern vs. Anonymität                             | Zwischenergebnisse sichtbar?                                      |
+| **Hotspot** (Rot)          | Wer darf Admins anlegen? Code einmalig? Ablaufdatum?                                                             |                                           | Stimme ändern vs. Anonymität                             | Zwischenergebnisse sichtbar?                                      |     | Zwischenergebnisse sichtbar?                                      |
 
 ### Geschäftsregeln (Invarianten der Aggregate)
 
