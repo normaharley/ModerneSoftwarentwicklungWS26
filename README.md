@@ -8,7 +8,7 @@ Voraussetzung: [uv](https://docs.astral.sh/uv/) ist installiert.
 uv sync                              # einmalig: Abhängigkeiten installieren
 uv run modernesoftwarentwicklungws26 # Programm starten
 uv run pytest                        # Tests ausführen
-make check                           # alle CI-Prüfungen: Lint, Format, Tests
+make check                           # alle CI-Prüfungen: Lint, Format, Typen, Context-Grenzen, Tests
 make fix                             # Lint-Fehler beheben und Code formatieren
 ```
 
