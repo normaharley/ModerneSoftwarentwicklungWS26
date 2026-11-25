@@ -394,14 +394,28 @@ Die Verträge sind bewusst strenger als die Context Map, weil ein Adapter in `id
 
 Reflektieren Sie über Ihre Erfahrungen:
 
-- [ ] Wie hat sich TDD auf Ihre Entwicklung ausgewirkt?
-- [ ] Welche Vorteile und Herausforderungen ergaben sich durch DDD?
-- [ ] Wie hat der Einsatz von LLMs Ihren Entwicklungsprozess verändert?
-- [ ] Was sind Grenzen und Risiken beim LLM-Einsatz in der Softwareentwicklung?
-- [ ] Wie stellen Sie sicher, dass Sie den Code verstehen und nicht nur „Copy-Paste“ betreiben?
-- [ ] Welche Aufgaben eignen sich besonders gut/schlecht für LLM-Unterstützung?
+- [x] Wie hat sich TDD auf Ihre Entwicklung ausgewirkt?
+- [x] Welche Vorteile und Herausforderungen ergaben sich durch DDD?
+- [x] Wie hat der Einsatz von LLMs Ihren Entwicklungsprozess verändert?
+- [x] Was sind Grenzen und Risiken beim LLM-Einsatz in der Softwareentwicklung?
+- [x] Wie stellen Sie sicher, dass Sie den Code verstehen und nicht nur „Copy-Paste“ betreiben?
+- [x] Welche Aufgaben eignen sich besonders gut/schlecht für LLM-Unterstützung?
 
 **Ziel/Output:** Ein besseres Verständnis der Herangehensweise sowie eine Reflexion zu DDD, TDD und LLM-gestützter Entwicklung. Kritische Bewertung der Chancen und Risiken (ca. 10-15 Sätze).
+
+### Bearbeitung
+
+**TDD:** Weil jeder Zyklus mit einem roten Test begann, mussten wir Fragen vor dem Code klären, etwa ob eine PLZ als `int` einen `TypeError` oder einen `ValueError` auslöst (A4). Ausgezahlt hat sich die Suite bei der Überarbeitung von Übung 3: Die neue Prüfung gegen das Wählerverzeichnis bestand aus einem angepassten Test-Double und einer geänderten Signatur, danach waren wieder alle 220 Tests grün (Zyklus 8). Schwierig war, „rot aus dem richtigen Grund“ zu erkennen: In Zyklus 4 scheiterten die Tests zuerst an gleichnamigen Testmodulen statt am fehlenden Code (A12).
+
+**DDD:** Die Bounded Contexts machen das Wahlgeheimnis zu einer Frage der Struktur: Der `Stimmzettel` trägt keine `PersonId`, und import-linter verhindert, dass `stimmabgabe` je eine `MeldeId` sieht. Dafür verlangt DDD viele Entscheidungen im Voraus, etwa was in den Shared Kernel gehört (A8), und Modell und Code laufen auseinander, wie die Abweichungen A1–A17 zeigen.
+
+**LLM im Prozess:** Das LLM hat vor allem die Breite erhöht: Es fand Widersprüche zwischen unseren Kapiteln und Testfälle wie das Kelvin-Zeichen oder `\n` hinter `$`, an die wir selbst nicht gedacht hätten. Unsere Arbeit hat sich dadurch vom Schreiben zum Prüfen und Entscheiden verschoben.
+
+**Grenzen und Risiken:** Die Regexes des LLM waren nur unter Bedingungen korrekt, die es selbst nicht nannte (Validierung vor `.lower()`, `[0-9]` statt `\d`); ungeprüft übernommen wären sie still falsch gewesen. Außerdem greift das LLM zu allgemeinen Mustern, die hier fachlich schaden: Event-Metadaten mit `ausgeloest_von` (V4) hätten das Wahlgeheimnis aufgehoben, und ein generierter Test legte eine Anforderung fest, obwohl der Prompt genau das verbot. Beim `WaehlerToken` konnte das LLM die Restlücke benennen (Geheimnis plus alle `PersonId`s), ob wir sie in Kauf nehmen, mussten wir aber selbst entscheiden.
+
+**Verstehen statt Copy-Paste:** Jede übernommene Aussage haben wir unabhängig nachgeprüft, etwa die Einladungscode-Regex per Skript über alle Unicode-Zeichen oder das Token mit einem selbst berechneten HMAC als Known-Answer-Test. Vorschläge haben wir nur mit eigener Begründung übernommen oder abgelehnt (V-B, V4, V5), und `mypy --strict` und import-linter prüfen die Regeln unabhängig davon, ob ein Mensch oder das LLM den Code geschrieben hat.
+
+**Eignung:** Gut geeignet sind Aufgaben mit klarem Prüfkriterium: Testfälle und Randfälle sammeln, Widersprüche in Dokumenten finden, Varianten vorschlagen und Code nach festen Kriterien reviewen. Schlecht geeignet sind fachliche und sicherheitskritische Entscheidungen, etwa ob Zwischenergebnisse sichtbar sein dürfen (R1), weil das nötige Wissen über die Domäne nicht im Prompt steht. Insgesamt war das LLM ein guter Sparringspartner, aber nur zusammen mit Tests und Werkzeugen, die seine Fehler sichtbar machen.
 
 ---
 
