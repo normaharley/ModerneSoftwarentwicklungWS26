@@ -368,10 +368,25 @@ Nach jedem Schritt ist `make check` grün: 208 Tests, 100 % Coverage, Ruff ohne 
 
 ## 5. Modularität und Testbarkeit via CI/CD sicherstellen
 
-- [ ] **(a)** Überprüfen Sie, ob Ihr Code modular aufgebaut ist und sich gut testen lässt. Trennen Sie die verschiedenen Bounded Contexts und sorgen Sie dafür, dass Abhängigkeiten klar definiert sind.
-- [ ] **(b)** Setzen Sie sich nun mit dem zweiten Übungsblatt zum Thema CI/CD erneut auseinander und dokumentieren Sie Ihr Vorgehen: Wie werden die zuvor implementierten Tests in der CI-Pipeline automatisch ausgeführt?
+- [x] **(a)** Überprüfen Sie, ob Ihr Code modular aufgebaut ist und sich gut testen lässt. Trennen Sie die verschiedenen Bounded Contexts und sorgen Sie dafür, dass Abhängigkeiten klar definiert sind.
+- [x] **(b)** Setzen Sie sich nun mit dem zweiten Übungsblatt zum Thema CI/CD erneut auseinander und dokumentieren Sie Ihr Vorgehen: Wie werden die zuvor implementierten Tests in der CI-Pipeline automatisch ausgeführt?
 
 **Ziel/Output:** Eine modulare Architektur, die den Prinzipien von DDD entspricht, und eine funktionierende CI-Pipeline. Eine kurze Erklärung (8-10 Sätze), wie Sie Modularität und Testbarkeit in Ihrem Code umgesetzt haben und wie Sie Ihre CI-Pipeline (inkl. Tests) aufgesetzt haben.
+
+### Bearbeitung
+
+**LLM-Einsatz:** Claude (Opus 5.5) in Claude Code hat den Import-Graphen gegen die Regeln aus Übung 3 (Kap. 3, 5, 6) geprüft, die Regeln als Verträge formuliert und mit absichtlich eingebauten Verstößen getestet.
+
+**(a) Modularität und Testbarkeit:** Jeder Bounded Context ist ein eigenes Package mit den Schichten `domain`, `application` und `infrastructure`; gemeinsam genutzt werden nur die IDs und Events in `shared`. Alles, was ein Context von außen braucht, steht als `Protocol` in seiner eigenen Domäne und wird per Konstruktor übergeben, deshalb lässt sich der Core `stimmabgabe` mit Test-Doubles und einem In-Memory-Repository vollständig testen. Der Code hielt die Regeln aus Übung 3 schon ein, aber nichts erzwang sie: Ein `import MeldeId` in `stimmabgabe` wäre durch jede Prüfung gekommen. Deshalb prüfen jetzt zwei Werkzeuge:
+
+| Werkzeug | prüft |
+|---|---|
+| [import-linter](https://import-linter.readthedocs.io/), 4 Verträge in der [pyproject.toml](../pyproject.toml) | Contexts importieren einander nicht · `shared` kennt keinen Context · die Domäne kennt weder `application` noch `infrastructure` · Aggregates kennen weder Repositories noch Services |
+| `mypy --strict` | jede Implementierung, auch jedes Test-Double, passt zu ihrem `Protocol` (Python prüft das zur Laufzeit nie) |
+
+Die Verträge sind bewusst strenger als die Context Map, weil ein Adapter in `identity` das `Protocol` aus `stimmabgabe` dank struktureller Typisierung nicht importieren muss; `abstimmung` und `auswertung` kommen hinzu, sobald ihre Packages existieren. Fünf absichtlich eingebaute Verstöße, darunter der `MeldeId`-Import und ein Test-Double mit veralteter Signatur, haben die Prüfung jeweils scheitern lassen.
+
+**(b) CI-Pipeline:** Die Pipeline ([ci.yml](../.github/workflows/ci.yml)) läuft auf GitHub Actions bei jedem Push und jedem Pull Request auf `main` und installiert mit `uv sync --locked` genau die Versionen aus `uv.lock`. Der Job `lint` führt Ruff, mypy und import-linter aus, danach führt der Job `test` pytest mit Coverage aus und lädt `coverage.xml` als Artefakt hoch. Weil pytest über `testpaths` alle Tests unter `tests/` selbst findet, laufen die TDD-Tests aus den Aufgaben 2–4 und jeder neue Test ohne Änderung an der Pipeline mit, und ein Fehler macht den Pull Request rot. Gegenüber Übung 2 entfallen die Django-Schritte (`manage.py check`, Migrationen), weil das Django-Setup zurückgenommen wurde (6437af2); `make check` führt lokal dieselben Prüfungen aus wie die CI.
 
 ---
 

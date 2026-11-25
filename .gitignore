@@ -5,3 +5,5 @@ db.sqlite3
 .coverage
 coverage.xml
 .env
+.mypy_cache/
+.import_linter_cache/
