@@ -1,0 +1,1137 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Bürgerstimme – Abstimmungsdetails</title>
+
+<style>
+:root {
+  --primary: #245c4b;
+  --bg: #f5f7f5;
+  --text: #202b26;
+  --muted: #718078;
+  --white: #fff;
+  --border: #e5eae6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* HEADER */
+
+header {
+  background: white;
+  padding: 20px 7%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  gap: 20px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+nav {
+  display: flex;
+  gap: 24px;
+}
+
+nav a {
+  text-decoration: none;
+  color: var(--text);
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover {
+  background: #194536;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* PAGE HEADER */
+
+.page-header {
+  background: var(--primary);
+  color: white;
+  padding: 45px 7%;
+}
+
+.breadcrumb {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 25px;
+}
+
+.breadcrumb a {
+  color: white;
+  text-decoration: none;
+}
+
+.page-header h1 {
+  font-size: 38px;
+  max-width: 850px;
+  margin: 15px 0;
+}
+
+.page-header p {
+  line-height: 1.6;
+  max-width: 700px;
+}
+
+/* GENERAL LAYOUT */
+
+main {
+  max-width: 1250px;
+  padding: 40px 30px;
+  margin: auto;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: 25px;
+  align-items: start;
+}
+
+.section {
+  background: white;
+  padding: 28px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 22px;
+}
+
+.section h2 {
+  margin-top: 0;
+  font-size: 21px;
+}
+
+/* STATUS */
+
+.status {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: #e5f3e9;
+  color: #267343;
+}
+
+.status.upcoming {
+  background: #fff2d9;
+  color: #96620d;
+}
+
+.status.finished {
+  background: #edf0ef;
+  color: #68736d;
+}
+
+/* DESCRIPTION */
+
+.description {
+  line-height: 1.8;
+  color: #526057;
+  white-space: pre-line;
+}
+
+/* IMAGE GALLERY */
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.gallery-item {
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  border-radius: 9px;
+  background: #edf1ed;
+}
+
+.gallery-item:first-child:last-child {
+  grid-column: span 2;
+}
+
+.gallery-placeholder {
+  background: #edf1ed;
+  height: 210px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* INFO */
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 15px;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--muted);
+}
+
+.info-value {
+  font-weight: bold;
+  text-align: right;
+}
+
+/* VOTING */
+
+.vote-option {
+  display: flex;
+  align-items: center;
+  padding: 17px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  gap: 13px;
+  transition: background 0.2s, border 0.2s;
+}
+
+.vote-option:hover {
+  background: #f3f7f4;
+  border-color: var(--primary);
+}
+
+.vote-option:has(input:checked) {
+  border: 2px solid var(--primary);
+  background: #edf5f0;
+}
+
+.vote-option input {
+  accent-color: var(--primary);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.vote-option strong {
+  font-size: 15px;
+}
+
+.vote-description {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.vote-button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 15px;
+  font-weight: bold;
+}
+
+.login-notice,
+.voted-notice,
+.loading-notice {
+  padding: 17px;
+  border-radius: 9px;
+  background: #edf1ed;
+  color: #526057;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.voted-notice {
+  background: #e5f3e9;
+  color: #267343;
+}
+
+.login-notice button {
+  margin-top: 12px;
+}
+
+.error-notice {
+  color: #a52c2c;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+/* FOOTER */
+
+footer {
+  padding: 30px 7%;
+  background: #203d32;
+  color: white;
+  margin-top: 40px;
+}
+
+footer p {
+  color: #d5ded8;
+}
+
+/* MODAL */
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 35px;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0 20px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.modal-content button {
+  width: 100%;
+}
+
+.close {
+  position: absolute;
+  right: 20px;
+  top: 12px;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+/* RESPONSIVE */
+
+@media(max-width: 800px) {
+  nav {
+    display: none;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media(max-width: 550px) {
+  .page-header h1 {
+    font-size: 29px;
+  }
+
+  .section {
+    padding: 20px;
+  }
+
+  .gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-item:first-child:last-child {
+    grid-column: span 1;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+
+<header>
+
+  <div class="logo">BÜRGERSTIMME.</div>
+
+  <nav>
+    <a href="index.html">Startseite</a>
+    <a href="index.html#abstimmungen">Abstimmungen</a>
+    <a href="#ergebnisse">Ergebnisse</a>
+    <a href="#kontakt">Kontakt</a>
+  </nav>
+
+  <button id="accountButton" onclick="toggleAccount()">
+    <span id="accountIcon">↪</span>
+    <span id="accountText">Anmelden</span>
+  </button>
+
+</header>
+
+
+<!-- PAGE HEADER -->
+
+<section class="page-header">
+
+  <div class="breadcrumb">
+    <a href="index.html">Startseite</a>
+    / <a href="index.html#abstimmungen">Abstimmungen</a>
+    / Details
+  </div>
+
+  <span class="status" id="headerStatus">
+    Abstimmung läuft
+  </span>
+
+  <h1 id="voteTitle">
+    Mehr Grünflächen für unsere Stadt
+  </h1>
+
+  <p>
+    Informiere dich über das Bürgerbegehren und
+    entscheide mit, wie sich unsere Stadt entwickeln soll.
+  </p>
+
+</section>
+
+
+<!-- MAIN CONTENT -->
+
+<main>
+
+  <div class="content-grid">
+
+    <!-- LEFT COLUMN -->
+
+    <div>
+
+      <!-- DESCRIPTION -->
+
+      <section class="section">
+
+        <h2>Über dieses Bürgerbegehren</h2>
+
+        <div class="description" id="voteDescription">
+          Unsere Stadt wächst stetig und mit ihr der Bedarf
+          an öffentlichen Grünflächen und Erholungsorten.
+
+          Mit diesem Bürgerbegehren soll erreicht werden,
+          dass zusätzliche Grünflächen geschaffen und
+          bestehende Parks erweitert werden.
+
+          Ziel ist es, die Lebensqualität zu verbessern,
+          die Artenvielfalt zu fördern und neue Orte der
+          Begegnung für alle Bürgerinnen und Bürger zu schaffen.
+        </div>
+
+      </section>
+
+
+      <!-- IMAGE GALLERY -->
+
+      <section class="section">
+
+        <h2>Impressionen</h2>
+
+        <p style="color:var(--muted); font-size:14px;">
+          Bilder und visuelle Informationen zum Bürgerbegehren.
+        </p>
+
+        <div class="gallery" id="imageGallery">
+
+          <!-- Bilder werden dynamisch geladen -->
+
+          <div class="gallery-placeholder">
+            Bild 1 – Platzhalter
+          </div>
+
+          <div class="gallery-placeholder">
+            Bild 2 – Platzhalter
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ADDITIONAL INFORMATION -->
+
+      <section class="section">
+
+        <h2>Hintergrund und Informationen</h2>
+
+        <p class="description" id="additionalInfo">
+          Weitere Informationen und Hintergründe zu diesem
+          Bürgerbegehren können hier dargestellt werden.
+
+          Beispielsweise können hier die Argumente der
+          Initiatoren, Stellungnahmen der Stadtverwaltung
+          oder weiterführende Dokumente erscheinen.
+        </p>
+
+      </section>
+
+    </div>
+
+
+    <!-- RIGHT COLUMN -->
+
+    <div>
+
+      <!-- GENERAL INFO -->
+
+      <section class="section">
+
+        <h2>Auf einen Blick</h2>
+
+        <div class="info-row">
+          <span class="info-label">Kategorie</span>
+          <span class="info-value" id="voteCategory">
+            Umwelt
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Beginn</span>
+          <span class="info-value" id="startDate">
+            01.12.2026
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Ende</span>
+          <span class="info-value" id="endDate">
+            15.12.2026
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Initiator</span>
+          <span class="info-value" id="initiator">
+            Bürgerinitiative
+          </span>
+        </div>
+
+      </section>
+
+
+      <!-- VOTING SECTION -->
+
+      <section class="section">
+
+        <h2>Deine Stimme zählt!</h2>
+
+        <p style="color:var(--muted); font-size:14px; line-height:1.6;">
+          Wie stehst du zu diesem Bürgerbegehren?
+          Wähle eine Antwort aus.
+        </p>
+
+        <!-- LOADING -->
+
+        <div id="loadingNotice" class="loading-notice">
+          Abstimmungsstatus wird geladen ...
+        </div>
+
+
+        <!-- NOT LOGGED IN -->
+
+        <div id="loginNotice" class="login-notice" hidden>
+
+          <strong>Bitte melde dich an.</strong>
+
+          <p>
+            Um an dieser Abstimmung teilzunehmen,
+            musst du angemeldet sein.
+          </p>
+
+          <button onclick="openLogin()">
+            Jetzt anmelden
+          </button>
+
+        </div>
+
+
+        <!-- VOTING FORM -->
+
+        <form id="votingForm" hidden>
+
+          <label class="vote-option">
+            <input type="radio" name="vote" value="yes" required>
+
+            <div>
+              <strong>Ja</strong>
+              <div class="vote-description">
+                Ich stimme dem Bürgerbegehren zu.
+              </div>
+            </div>
+          </label>
+
+
+          <label class="vote-option">
+            <input type="radio" name="vote" value="no">
+
+            <div>
+              <strong>Nein</strong>
+              <div class="vote-description">
+                Ich lehne das Bürgerbegehren ab.
+              </div>
+            </div>
+          </label>
+
+
+          <label class="vote-option">
+            <input type="radio" name="vote" value="abstain">
+
+            <div>
+              <strong>Enthaltung</strong>
+              <div class="vote-description">
+                Ich möchte mich nicht festlegen.
+              </div>
+            </div>
+          </label>
+
+
+          <button type="submit" class="vote-button" id="submitVote">
+            Stimme bestätigen
+          </button>
+
+        </form>
+
+
+        <!-- ALREADY VOTED -->
+
+        <div id="votedNotice" class="voted-notice" hidden>
+
+          <strong>✓ Stimme bereits abgegeben</strong>
+
+          <p>
+            Du hast bei dieser Abstimmung bereits
+            deine Stimme abgegeben. Vielen Dank
+            für deine Beteiligung!
+          </p>
+
+        </div>
+
+
+        <!-- ERROR -->
+
+        <div id="voteError" class="error-notice" hidden>
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+
+</main>
+
+
+<!-- LOGIN MODAL -->
+
+<div id="loginModal" class="modal">
+
+  <div class="modal-content">
+
+    <span class="close" onclick="closeLogin()">×</span>
+
+    <h2>Willkommen zurück!</h2>
+
+    <p>Melde dich bei Bürgerstimme an.</p>
+
+    <form onsubmit="login(event)">
+
+      <label>E-Mail-Adresse</label>
+
+      <input type="email" id="email"
+        placeholder="name@beispiel.de" required>
+
+      <label>Passwort</label>
+
+      <input type="password" id="password"
+        placeholder="Passwort" required>
+
+      <button type="submit">Anmelden</button>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- FOOTER -->
+
+<footer id="kontakt">
+
+  <strong>BÜRGERSTIMME.</strong>
+
+  <p>Informieren. Mitentscheiden. Mitgestalten.</p>
+
+  <small>Impressum · Datenschutz · Kontakt</small>
+
+</footer>
+
+
+<!-- JAVASCRIPT -->
+
+<script>
+
+// ==========================================
+// 1. DEMO-DATEN
+// ==========================================
+
+const voteData = {
+
+  id: 1,
+
+  title: "Mehr Grünflächen für unsere Stadt",
+
+  category: "Umwelt",
+
+  description:
+    "Unsere Stadt wächst stetig und mit ihr der Bedarf an öffentlichen Grünflächen und Erholungsorten.\n\n" +
+    "Mit diesem Bürgerbegehren soll erreicht werden, dass zusätzliche Grünflächen geschaffen und bestehende Parks erweitert werden.\n\n" +
+    "Ziel ist es, die Lebensqualität zu verbessern, die Artenvielfalt zu fördern und neue Orte der Begegnung für alle Bürgerinnen und Bürger zu schaffen.",
+
+  additionalInfo:
+    "Weitere Informationen und Hintergründe zu diesem Bürgerbegehren können hier dargestellt werden.\n\n" +
+    "Beispielsweise Argumente der Initiatoren, Stellungnahmen der Stadtverwaltung oder weiterführende Dokumente.",
+
+  startDate: "01.12.2026",
+
+  endDate: "15.12.2026",
+
+  initiator: "Bürgerinitiative",
+
+  status: "active",
+
+  images: [
+    // Später beispielsweise:
+    // "images/park1.jpg",
+    // "images/park2.jpg"
+  ]
+
+};
+
+
+// ==========================================
+// 2. BENUTZERSTATUS
+// ==========================================
+
+let isLoggedIn = false;
+let currentUser = null;
+
+let hasVoted = false;
+let isLoading = true;
+let isSubmitting = false;
+
+
+// ==========================================
+// 3. DATEN LADEN
+// ==========================================
+
+// Später kann diese Funktion eine API aufrufen.
+// Hier werden zunächst Demo-Daten verwendet.
+
+async function loadVoteData() {
+
+  // Beispiel für später:
+  // const response = await fetch('/api/votes/1');
+  // return await response.json();
+
+  return voteData;
+
+}
+
+
+// ==========================================
+// 4. ABSTIMMUNGSSTATUS LADEN
+// ==========================================
+
+async function loadVoteStatus() {
+
+  // Später beispielsweise:
+  // const response = await fetch('/api/votes/1/status');
+  // const data = await response.json();
+  // return data;
+
+  return {
+    isLoggedIn: isLoggedIn,
+    hasVoted: hasVoted
+  };
+
+}
+
+
+// ==========================================
+// 5. SEITE INITIALISIEREN
+// ==========================================
+
+async function initializePage() {
+
+  try {
+
+    isLoading = true;
+    updateVotingInterface();
+
+    const data = await loadVoteData();
+
+    document.getElementById("voteTitle").textContent =
+      data.title;
+
+    document.getElementById("voteDescription").textContent =
+      data.description;
+
+    document.getElementById("additionalInfo").textContent =
+      data.additionalInfo;
+
+    document.getElementById("voteCategory").textContent =
+      data.category;
+
+    document.getElementById("startDate").textContent =
+      data.startDate;
+
+    document.getElementById("endDate").textContent =
+      data.endDate;
+
+    document.getElementById("initiator").textContent =
+      data.initiator;
+
+    // Status anzeigen
+
+    const statusElement =
+      document.getElementById("headerStatus");
+
+    if (data.status === "active") {
+      statusElement.textContent = "Abstimmung läuft";
+    } else if (data.status === "upcoming") {
+      statusElement.textContent = "Demnächst";
+      statusElement.className = "status upcoming";
+    } else {
+      statusElement.textContent = "Abgeschlossen";
+      statusElement.className = "status finished";
+    }
+
+    // Bilder dynamisch laden
+
+    loadImages(data.images);
+
+    // Benutzerstatus abrufen
+
+    const status = await loadVoteStatus();
+
+    isLoggedIn = status.isLoggedIn;
+    hasVoted = status.hasVoted;
+
+  } catch (error) {
+
+    console.error("Fehler beim Laden:", error);
+
+    document.getElementById("voteError").textContent =
+      "Die Abstimmungsdaten konnten nicht geladen werden.";
+
+    document.getElementById("voteError").hidden = false;
+
+  } finally {
+
+    isLoading = false;
+    updateVotingInterface();
+
+  }
+
+}
+
+
+// ==========================================
+// 6. BILDER LADEN
+// ==========================================
+
+function loadImages(images) {
+
+  const gallery = document.getElementById("imageGallery");
+
+  gallery.innerHTML = "";
+
+  if (!images || images.length === 0) {
+
+    gallery.innerHTML = `
+      <div class="gallery-placeholder">
+        Keine Bilder vorhanden
+      </div>
+    `;
+
+    return;
+  }
+
+  images.forEach(image => {
+
+    const img = document.createElement("img");
+
+    img.src = image;
+    img.alt = "Bild zum Bürgerbegehren";
+    img.className = "gallery-item";
+
+    gallery.appendChild(img);
+
+  });
+
+}
+
+
+// ==========================================
+// 7. ABSTIMMUNGSINTERFACE AKTUALISIEREN
+// ==========================================
+
+function updateVotingInterface() {
+
+  const loading = document.getElementById("loadingNotice");
+  const login = document.getElementById("loginNotice");
+  const form = document.getElementById("votingForm");
+  const voted = document.getElementById("votedNotice");
+
+  // Zunächst alle Bereiche ausblenden
+
+  loading.hidden = true;
+  login.hidden = true;
+  form.hidden = true;
+  voted.hidden = true;
+
+  // Während des Ladens
+
+  if (isLoading) {
+
+    loading.hidden = false;
+    return;
+
+  }
+
+  // Nicht angemeldet
+
+  if (!isLoggedIn) {
+
+    login.hidden = false;
+    return;
+
+  }
+
+  // Bereits abgestimmt
+
+  if (hasVoted) {
+
+    voted.hidden = false;
+    return;
+
+  }
+
+  // Angemeldet und noch nicht abgestimmt
+
+  form.hidden = false;
+
+}
+
+
+// ==========================================
+// 8. STIMME ABGEBEN
+// ==========================================
+
+document.getElementById("votingForm")
+  .addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    if (!isLoggedIn || hasVoted || isSubmitting) {
+      return;
+    }
+
+    const selectedVote =
+      document.querySelector('input[name="vote"]:checked');
+
+    if (!selectedVote) {
+      return;
+    }
+
+    const button = document.getElementById("submitVote");
+
+    const error = document.getElementById("voteError");
+
+    isSubmitting = true;
+
+    button.disabled = true;
+    button.textContent = "Stimme wird übermittelt ...";
+
+    error.hidden = true;
+
+    try {
+
+      await submitVote(selectedVote.value);
+
+      hasVoted = true;
+
+      updateVotingInterface();
+
+    } catch (err) {
+
+      error.textContent =
+        "Deine Stimme konnte nicht übermittelt werden. Bitte versuche es erneut.";
+
+      error.hidden = false;
+
+    } finally {
+
+      isSubmitting = false;
+
+      if (!hasVoted) {
+        button.disabled = false;
+        button.textContent = "Stimme bestätigen";
+      }
+
+    }
+
+  });
+
+
+// ==========================================
+// 9. STIMME AN SERVER ÜBERMITTELN
+// ==========================================
+
+async function submitVote(choice) {
+
+  // Später beispielsweise:
+  //
+  // const response = await fetch('/api/votes/1/submit', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ choice: choice })
+  // });
+  //
+  // if (!response.ok) throw new Error('Voting failed');
+  //
+  // return await response.json();
+
+  console.log("Demo-Stimme abgegeben:", choice);
+
+  // Simulierte Ladezeit
+
+  await new Promise(resolve => setTimeout(resolve, 1200));
+
+  return { success: true };
+
+}
+
+
+// ==========================================
+// 10. LOGIN
+// ==========================================
+
+function toggleAccount() {
+
+  if (isLoggedIn) {
+
+    alert("Angemeldet als: " + currentUser);
+
+  } else {
+
+    openLogin();
+
+  }
+
+}
+
+function openLogin() {
+
+  document.getElementById("loginModal").style.display = "flex";
+
+}
+
+function closeLogin() {
+
+  document.getElementById("loginModal").style.display = "none";
+
+}
+
+function login(event) {
+
+  event.preventDefault();
+
+  currentUser = document.getElementById("email").value;
+
+  isLoggedIn = true;
+
+  document.getElementById("accountText").textContent =
+    "Mein Profil";
+
+  document.getElementById("accountIcon").textContent =
+    "👤";
+
+  closeLogin();
+
+  // Status nach Login erneut laden
+
+  initializePage();
+
+}
+
+
+// ==========================================
+// 11. LOGOUT
+// ==========================================
+
+function logout() {
+
+  isLoggedIn = false;
+  currentUser = null;
+
+  document.getElementById("accountText").textContent =
+    "Anmelden";
+
+  document.getElementById("accountIcon").textContent =
+    "↪";
+
+  // Abstimmungsstatus aktualisieren
+
+  initializePage();
+
+}
+
+
+// ==========================================
+// 12. START
+// ==========================================
+
+initializePage();
+
+</script>
+
+</body>
+</html>
